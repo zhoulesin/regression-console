@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArtifactDir, parseFailedStep } from './failureContext.js';
+import { AppError } from './errors.js';
 
 /**
  * IDE/GUI 启动的 Node 不一定继承 shell PATH。优先支持显式覆盖，再查 PATH，
@@ -69,17 +70,21 @@ export function findLatestArtifactDir() {
  * @param {{
  *   spawnFn?: typeof defaultSpawn,
  *   store: ReturnType<import('./store.js').createStore>,
- *   repoRoot: string,
+ *   appRoot: string,
  *   maestroBin?: string,
  *   exportFn?: () => void,
+ *   appId?: string,
+ *   device?: string,
  * }} opts
  */
 export function createRunner({
   spawnFn = defaultSpawn,
   store,
-  repoRoot,
+  appRoot,
   maestroBin = 'maestro',
   exportFn,
+  appId = '',
+  device = '',
 }) {
   /** @type {import('node:child_process').ChildProcess | null} */
   let activeChild = null;
@@ -107,17 +112,30 @@ export function createRunner({
    * @param {string} [module]
    */
   function start(featureCode, module = 'todo') {
+    // 闸门前置：不可执行的功能点绝不 spawn，也绝不留下 run 记录
+    const feature = store.getFeature(featureCode, module);
+    if (!feature) {
+      throw new AppError(404, 'FEATURE_NOT_FOUND', `feature ${module}/${featureCode} 不存在`);
+    }
+    if (!feature.runnable) {
+      throw new AppError(
+        400,
+        feature.manual ? 'FEATURE_MANUAL' : 'FLOW_MISSING',
+        feature.manual ? '该功能点需手动验证' : 'yaml 未找到',
+      );
+    }
+    const flows = store.listFlows(featureCode, module);
+    const flow = flows.find((f) => f.kind === 'flow');
+    if (!flow || !fs.existsSync(path.join(appRoot, flow.path))) {
+      throw new AppError(400, 'FLOW_MISSING', `yaml 未找到：${flow?.path ?? '(无绑定)'}`);
+    }
+
     // startRun 在有活跃 run 时抛 409，保证 spawn 前失败
     // 旧数据可能没有轮次；首次直接执行时补一轮，后续 rerun 复用当前轮。
     const attempt =
       store.getCurrentAttempt(featureCode, module) ??
       store.createAttempt(featureCode, module);
     const run = store.startRun(featureCode, module, attempt.id);
-    const flows = store.listFlows(featureCode, module);
-    const flow = flows.find((f) => f.kind === 'flow');
-    if (!flow) {
-      throw new Error('必须有 kind=flow 的行');
-    }
 
     logsByRun.set(run.id, []);
     let log = '';
@@ -161,7 +179,12 @@ export function createRunner({
     };
 
     try {
-      child = spawnFn(maestroBin, ['test', flow.path], { cwd: repoRoot });
+      // yaml 里的 appId 用 ${APP_ID} 引用，值来自清单，不再硬编码进脚本
+      const args = ['test'];
+      if (appId) args.push('-e', `APP_ID=${appId}`);
+      if (device) args.push('-e', `DEVICE=${device}`);
+      args.push(flow.path);
+      child = spawnFn(maestroBin, args, { cwd: appRoot });
       activeChild = child;
       child.stdout?.on('data', onData);
       child.stderr?.on('data', onData);

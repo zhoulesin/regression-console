@@ -147,6 +147,9 @@ describe('export wiring', () => {
       path: 'maestro/todo/item-fast-add.yaml',
       kind: 'flow',
     });
+    // runner spawn 前会校验 yaml 存在
+    fs.mkdirSync(path.join(repoRoot, 'maestro/todo'), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, 'maestro/todo/item-fast-add.yaml'), '# t\n');
 
     let exportCalls = 0;
     const child = new EventEmitter();
@@ -157,7 +160,7 @@ describe('export wiring', () => {
     const runner = createRunner({
       spawnFn: () => child,
       store,
-      repoRoot,
+      appRoot: repoRoot,
       exportFn: () => {
         exportCalls += 1;
       },

@@ -38,9 +38,13 @@ const token = newToken();
 const exportFn = () => exportSnapshot({ store, repoRoot: regressionRoot });
 const runner = createRunner({
   store,
-  repoRoot: regressionRoot,
+  appRoot,
   maestroBin: resolveMaestroBin(),
   exportFn,
+  // appId/device 由清单提供，DUT manifest 就绪后从 sync 结果透传；
+  // 目前清单未建，先保持空串（不注入 -e，行为与旧版一致）
+  appId: '',
+  device: '',
 });
 const app = createApp({
   store,

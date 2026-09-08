@@ -30,6 +30,9 @@ function tmpEnv() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-runner-'));
   const db = openDb(path.join(dir, 't.db'));
   const store = createStore(db);
+  // flow 路径必须真实存在：runner spawn 前会校验
+  fs.mkdirSync(path.join(dir, 'maestro/todo'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'maestro/todo/item-fast-add.yaml'), '# t\n');
   store.upsertFeature({
     code: '2.1',
     chapter: 2,
@@ -82,7 +85,7 @@ describe('runner single slot + abort', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
     assert.ok(run.id);
@@ -100,7 +103,7 @@ describe('runner single slot + abort', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
     assert.equal(env.store.getFeature('2.1', 'todo').status, STATUS.RUNNING);
@@ -119,7 +122,7 @@ describe('runner single slot + abort', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
     const lines = [];
@@ -135,7 +138,7 @@ describe('runner single slot + abort', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
 
@@ -158,6 +161,79 @@ describe('runner single slot + abort', () => {
 
   it('findLatestArtifactDir returns string', () => {
     assert.equal(typeof findLatestArtifactDir(), 'string');
+  });
+
+  it('does not spawn when feature is not runnable', () => {
+    env.store.upsertFeature({
+      module: 'todo',
+      code: '2.1',
+      chapter: 2,
+      title: 't',
+      criteria: 'c',
+      status: STATUS.PENDING_RUN,
+      runnable: 0,
+    });
+    const runner = createRunner({
+      spawnFn,
+      store: env.store,
+      appRoot: env.repoRoot,
+    });
+    assert.throws(() => runner.start('2.1', 'todo'), (e) => e.code === 'FLOW_MISSING');
+    assert.equal(spawnCalls.length, 0);
+  });
+
+  it('manual feature is FEATURE_MANUAL, not FLOW_MISSING', () => {
+    env.store.upsertFeature({
+      module: 'todo',
+      code: '2.1',
+      chapter: 2,
+      title: 't',
+      criteria: 'c',
+      status: STATUS.PENDING_RUN,
+      runnable: 0,
+      manual: 1,
+    });
+    const runner = createRunner({
+      spawnFn,
+      store: env.store,
+      appRoot: env.repoRoot,
+    });
+    assert.throws(() => runner.start('2.1', 'todo'), (e) => e.code === 'FEATURE_MANUAL');
+    assert.equal(spawnCalls.length, 0);
+  });
+
+  it('missing yaml file on disk is FLOW_MISSING and leaves no run row', () => {
+    fs.rmSync(path.join(env.repoRoot, 'maestro/todo/item-fast-add.yaml'));
+    const runner = createRunner({
+      spawnFn,
+      store: env.store,
+      appRoot: env.repoRoot,
+    });
+    assert.throws(() => runner.start('2.1', 'todo'), (e) => e.code === 'FLOW_MISSING');
+    assert.equal(spawnCalls.length, 0);
+    assert.equal(env.store.getActiveRun(), undefined);
+  });
+
+  it('injects appId/device flags before flow path and uses appRoot cwd', () => {
+    const runner = createRunner({
+      spawnFn,
+      store: env.store,
+      appRoot: env.repoRoot,
+      appId: 'com.cozyla.choresreward',
+      device: 'emulator-5554',
+    });
+    runner.start('2.1', 'todo');
+    assert.equal(spawnCalls.length, 1);
+    assert.equal(spawnCalls[0].opts.cwd, env.repoRoot);
+    assert.deepEqual(spawnCalls[0].args, [
+      'test',
+      '-e',
+      'APP_ID=com.cozyla.choresreward',
+      '-e',
+      'DEVICE=emulator-5554',
+      'maestro/todo/item-fast-add.yaml',
+    ]);
+    children[0].emit('close', 0);
   });
 });
 
@@ -215,7 +291,7 @@ describe('runner HTTP routes', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const app = createApp({
       store: env.store,
@@ -269,7 +345,7 @@ describe('runner HTTP routes', () => {
     const runner = createRunner({
       spawnFn,
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
     children[0].stdout.emit('data', 'pre\n');

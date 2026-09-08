@@ -576,7 +576,7 @@ git commit -m "feat(http): sync from manifest and freeze catalog writes"
   `'-e', 'DEVICE=<device>'`。两者缺省则不加，与当前行为完全一致（跨项目口子，本轮可只传空串）
 - `start`：若 feature `runnable === 0` 或文件不存在，抛 `AppError(400, 'FLOW_MISSING', ...)`，**不** `startRun`
 
-- [ ] **Step 1: Extend runner test**
+- [x] **Step 1: Extend runner test**
 
 现有 `spawnCalls` 断言把 `opts.cwd` 从 `env.repoRoot` 改为显式 `appRoot`。新增：
 
@@ -594,7 +594,7 @@ it('does not spawn when feature is not runnable', () => {
 
 （注意：该测试与「2.1 可跑」测试不要共用未重置的 runnable；分 it 各自 upsert。）
 
-- [ ] **Step 2: FAIL then implement**
+- [x] **Step 2: FAIL then implement**
 
 `server.js`：
 
@@ -625,9 +625,9 @@ const app = createApp({ store, appRoot, manifestPath, token, runner });
 
 删除 `importIfEmpty`、`syncFlowBindings`、`DEFAULT_MODULES` 循环。无 `appRoot` 仍 `listen`，只打日志 `NO_APP_ROOT`。
 
-- [ ] **Step 3: PASS `node --test test/runner.test.js`**
+- [x] **Step 3: PASS `node --test test/runner.test.js`**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/runner.js src/server.js test/runner.test.js
