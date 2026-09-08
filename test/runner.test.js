@@ -103,13 +103,13 @@ describe('runner single slot + abort', () => {
       repoRoot: env.repoRoot,
     });
     const run = runner.start('2.1');
-    assert.equal(env.store.getFeature('2.1').status, STATUS.RUNNING);
+    assert.equal(env.store.getFeature('2.1', 'todo').status, STATUS.RUNNING);
 
     runner.abort();
     assert.equal(children[0]._killedWith, 'SIGTERM');
     await new Promise((r) => setTimeout(r, 20));
 
-    assert.equal(env.store.getFeature('2.1').status, STATUS.FAILED);
+    assert.equal(env.store.getFeature('2.1', 'todo').status, STATUS.FAILED);
     assert.equal(env.store.getActiveRun(), undefined);
     const row = env.db.prepare('SELECT exit_code FROM run WHERE id = ?').get(run.id);
     assert.notEqual(row.exit_code, 0);
@@ -128,7 +128,7 @@ describe('runner single slot + abort', () => {
     children[0].emit('close', 0);
     await new Promise((r) => setTimeout(r, 10));
     assert.deepEqual(lines, ['ok-line\n']);
-    assert.equal(env.store.getFeature('2.1').status, STATUS.PASSED);
+    assert.equal(env.store.getFeature('2.1', 'todo').status, STATUS.PASSED);
   });
 
   it('spawn error records failure and releases the runner slot', async () => {
@@ -147,7 +147,7 @@ describe('runner single slot + abort', () => {
     children[0].emit('close', -2);
     await new Promise((r) => setTimeout(r, 10));
 
-    assert.equal(env.store.getFeature('2.1').status, STATUS.FAILED);
+    assert.equal(env.store.getFeature('2.1', 'todo').status, STATUS.FAILED);
     assert.equal(env.store.getActiveRun(), undefined);
     const row = env.db
       .prepare('SELECT exit_code, log_excerpt FROM run WHERE id = ?')

@@ -159,7 +159,7 @@ git commit -m "fix(config): require explicit appRoot, add manifestPath"
 
 `getFeature(code, module)` 必须传 module，去掉默认 `'todo'`（调用方一律显式传）。本任务改 store 签名后，先修编译/测试里所有 `getFeature('x')` 为 `getFeature('x', 'todo')`（夹具模块仍用 todo 字符串，不是常量默认）。
 
-- [ ] **Step 1: Write the failing test**（追加到 `test/store.test.js`）
+- [x] **Step 1: Write the failing test**（追加到 `test/store.test.js`）
 
 ```javascript
 it('hides features not in the keep set and listFeatures skips them', () => {
@@ -176,13 +176,13 @@ it('hides features not in the keep set and listFeatures skips them', () => {
 
 （若当前 store 测试用的库还没有 2.1，先 upsert 2.1 再 hide。）
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test test/store.test.js`
 
 Expected: FAIL（无 `hidden` 列或无 `hideFeaturesNotIn`）
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `migrate` 末尾、`module_meta.title` 迁移之后：
 
@@ -211,13 +211,13 @@ if (metaCols.length && !metaCols.includes('hidden')) {
 
 新插入：`status = row.status ?? '待执行'`，`hidden = row.hidden ?? 0`，`runnable = row.runnable ?? 1`，`manual = row.manual ?? 0`。
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `node --test test/store.test.js test/moduleStore.test.js`
 
 Expected: PASS（顺手修因去掉 `getFeature` 默认 module 而红的断言）
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/db.js src/store.js test/store.test.js test/moduleStore.test.js

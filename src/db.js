@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS feature (
   status TEXT NOT NULL,
   notes TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  runnable INTEGER NOT NULL DEFAULT 1,
+  manual INTEGER NOT NULL DEFAULT 0,
   UNIQUE(module, code)
 );
 CREATE TABLE IF NOT EXISTS flow (
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS module_meta (
   module TEXT PRIMARY KEY,
   notes TEXT NOT NULL DEFAULT '',
   chapters_json TEXT NOT NULL DEFAULT '{}',
+  hidden INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT NOT NULL
 );
 `;
@@ -319,6 +323,24 @@ function migrate(db) {
   const metaCols = db.prepare(`PRAGMA table_info(module_meta)`).all().map((c) => c.name);
   if (metaCols.length && !metaCols.includes('title')) {
     db.exec(`ALTER TABLE module_meta ADD COLUMN title TEXT NOT NULL DEFAULT ''`);
+  }
+
+  // 快照标记：功能点退出 manifest 时软删除（hidden），yaml 缺失或人工项则不可执行
+  const featureCols2 = db.prepare(`PRAGMA table_info(feature)`).all().map((c) => c.name);
+  if (featureCols2.length && !featureCols2.includes('hidden')) {
+    db.exec(`ALTER TABLE feature ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`);
+  }
+  const featureCols3 = db.prepare(`PRAGMA table_info(feature)`).all().map((c) => c.name);
+  if (featureCols3.length && !featureCols3.includes('runnable')) {
+    db.exec(`ALTER TABLE feature ADD COLUMN runnable INTEGER NOT NULL DEFAULT 1`);
+  }
+  const featureCols4 = db.prepare(`PRAGMA table_info(feature)`).all().map((c) => c.name);
+  if (featureCols4.length && !featureCols4.includes('manual')) {
+    db.exec(`ALTER TABLE feature ADD COLUMN manual INTEGER NOT NULL DEFAULT 0`);
+  }
+  const metaCols2 = db.prepare(`PRAGMA table_info(module_meta)`).all().map((c) => c.name);
+  if (metaCols2.length && !metaCols2.includes('hidden')) {
+    db.exec(`ALTER TABLE module_meta ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`);
   }
 
   backfillWorkflowAttempts(db);

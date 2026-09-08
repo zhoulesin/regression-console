@@ -168,6 +168,6 @@ describe('export wiring', () => {
     child.emit('close', 0);
     await new Promise((r) => setTimeout(r, 10));
     assert.equal(exportCalls, 1);
-    assert.equal(store.getFeature('2.1').status, STATUS.PASSED);
+    assert.equal(store.getFeature('2.1', 'todo').status, STATUS.PASSED);
   });
 });

@@ -9,24 +9,43 @@ import {
  */
 export function createStore(db) {
   const listAllStmt = db.prepare(
-    'SELECT * FROM feature ORDER BY module, chapter, code',
+    'SELECT * FROM feature WHERE hidden = 0 ORDER BY module, chapter, code',
   );
   const listByModuleStmt = db.prepare(
+    'SELECT * FROM feature WHERE module = ? AND hidden = 0 ORDER BY chapter, code',
+  );
+  const listFeaturesHiddenStmt = db.prepare(
     'SELECT * FROM feature WHERE module = ? ORDER BY chapter, code',
   );
   const getFeatureStmt = db.prepare(
     'SELECT * FROM feature WHERE module = ? AND code = ?',
   );
+  // status 属于控制台的执行结果，sync 不允许覆盖；notes 同理，仅在显式传入时更新
   const upsertFeatureStmt = db.prepare(`
-    INSERT INTO feature (module, code, chapter, title, criteria, precondition, status, notes, updated_at)
-    VALUES (@module, @code, @chapter, @title, @criteria, @precondition, @status, @notes, @updated_at)
+    INSERT INTO feature (module, code, chapter, title, criteria, precondition, status, notes, updated_at, hidden, runnable, manual)
+    VALUES (@module, @code, @chapter, @title, @criteria, @precondition, @status, @notes, @updated_at, @hidden, @runnable, @manual)
     ON CONFLICT(module, code) DO UPDATE SET
       chapter = excluded.chapter,
       title = excluded.title,
       criteria = excluded.criteria,
       precondition = excluded.precondition,
-      status = excluded.status,
+      hidden = excluded.hidden,
+      runnable = excluded.runnable,
+      manual = excluded.manual,
+      updated_at = excluded.updated_at
+  `);
+  const upsertFeatureNotesStmt = db.prepare(`
+    INSERT INTO feature (module, code, chapter, title, criteria, precondition, status, notes, updated_at, hidden, runnable, manual)
+    VALUES (@module, @code, @chapter, @title, @criteria, @precondition, @status, @notes, @updated_at, @hidden, @runnable, @manual)
+    ON CONFLICT(module, code) DO UPDATE SET
+      chapter = excluded.chapter,
+      title = excluded.title,
+      criteria = excluded.criteria,
+      precondition = excluded.precondition,
       notes = excluded.notes,
+      hidden = excluded.hidden,
+      runnable = excluded.runnable,
+      manual = excluded.manual,
       updated_at = excluded.updated_at
   `);
   const setStatusStmt = db.prepare(
@@ -34,6 +53,9 @@ export function createStore(db) {
   );
   const setFeatureNotesStmt = db.prepare(
     'UPDATE feature SET notes = ?, updated_at = ? WHERE module = ? AND code = ?',
+  );
+  const setFeatureHiddenStmt = db.prepare(
+    'UPDATE feature SET hidden = ?, updated_at = ? WHERE module = ? AND code = ?',
   );
   const listFlowsStmt = db.prepare(
     'SELECT * FROM flow WHERE feature_module = ? AND feature_code = ? ORDER BY id',
@@ -107,8 +129,18 @@ export function createStore(db) {
     'SELECT * FROM module_meta WHERE module = ?',
   );
   const listModulesStmt = db.prepare(
-    'SELECT module, title, notes, chapters_json, updated_at FROM module_meta ORDER BY module',
+    'SELECT module, title, notes, chapters_json, hidden, updated_at FROM module_meta WHERE hidden = 0 ORDER BY module',
   );
+  // 模块目录来自 manifest：只更新目录字段，不动 notes（备注属于控制台）
+  const upsertModuleStmt = db.prepare(`
+    INSERT INTO module_meta (module, title, chapters_json, hidden, updated_at)
+    VALUES (@module, @title, @chapters_json, @hidden, @updated_at)
+    ON CONFLICT(module) DO UPDATE SET
+      title = excluded.title,
+      chapters_json = excluded.chapters_json,
+      hidden = excluded.hidden,
+      updated_at = excluded.updated_at
+  `);
   const insertModuleStmt = db.prepare(`
     INSERT INTO module_meta (module, title, notes, chapters_json, updated_at)
     VALUES (@module, @title, '', '{}', @updated_at)
@@ -302,29 +334,62 @@ export function createStore(db) {
   });
 
   return {
-    /** @param {string=} module 省略则返回全部模块 */
+    /** @param {string=} module 省略则返回全部模块（均不含 hidden） */
     listFeatures(module) {
       if (module) return listByModuleStmt.all(module);
       return listAllStmt.all();
     },
 
-    getFeature(code, module = DEFAULT_MODULE) {
-      return getFeatureStmt.get(mod(module), code);
+    /** 含 hidden 行，仅供测试与同步内部核对 */
+    listFeaturesHidden(module) {
+      return listFeaturesHiddenStmt.all(mod(module));
+    },
+
+    getFeature(code, module) {
+      return getFeatureStmt.get(module, code);
     },
 
     upsertFeature(row) {
       const updated_at = new Date().toISOString();
-      upsertFeatureStmt.run({
+      const params = {
         module: mod(row.module),
         code: row.code,
         chapter: row.chapter,
         title: row.title,
         criteria: row.criteria,
         precondition: row.precondition ?? '',
-        status: row.status,
+        status: row.status ?? STATUS.PENDING_RUN,
         notes: row.notes ?? '',
+        hidden: row.hidden ?? 0,
+        runnable: row.runnable ?? 1,
+        manual: row.manual ?? 0,
         updated_at,
-      });
+      };
+      // 未显式传 notes 就不动备注：备注是人工积累的执行记录，不属于清单
+      const stmt = row.notes === undefined ? upsertFeatureStmt : upsertFeatureNotesStmt;
+      stmt.run(params);
+    },
+
+    setFeatureHidden(module, code, hidden) {
+      setFeatureHiddenStmt.run(
+        hidden ? 1 : 0,
+        new Date().toISOString(),
+        mod(module),
+        code,
+      );
+    },
+
+    /** 清单里没有的功能点全部软删除，保留 status / notes / 历史 run */
+    hideFeaturesNotIn(keep) {
+      const keys = (keep ?? []).map((k) => `${k.module}|${k.code}`);
+      if (keys.length === 0) {
+        db.prepare('UPDATE feature SET hidden = 1').run();
+        return;
+      }
+      const placeholders = keys.map(() => '?').join(',');
+      db.prepare(
+        `UPDATE feature SET hidden = 1 WHERE (module || '|' || code) NOT IN (${placeholders})`,
+      ).run(...keys);
     },
 
     setStatus(code, status, module = DEFAULT_MODULE) {
@@ -557,6 +622,29 @@ export function createStore(db) {
 
     listModules() {
       return listModulesStmt.all();
+    },
+
+    upsertModule({ id, title, chapters, hidden }) {
+      upsertModuleStmt.run({
+        module: id,
+        title: title ?? '',
+        chapters_json: JSON.stringify(chapters ?? {}),
+        hidden: hidden ?? 0,
+        updated_at: new Date().toISOString(),
+      });
+    },
+
+    /** 清单里没有的模块全部软删除，保留 notes */
+    hideModulesNotIn(ids) {
+      const keep = ids ?? [];
+      if (keep.length === 0) {
+        db.prepare('UPDATE module_meta SET hidden = 1').run();
+        return;
+      }
+      const placeholders = keep.map(() => '?').join(',');
+      db.prepare(
+        `UPDATE module_meta SET hidden = 1 WHERE module NOT IN (${placeholders})`,
+      ).run(...keep);
     },
 
     createModule({ id, title }) {

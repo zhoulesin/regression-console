@@ -19,9 +19,9 @@ describe('importer', () => {
     const b = importIfEmpty(store);
     assert.equal(a.imported, 24);
     assert.equal(b.imported, 0);
-    assert.equal(store.getFeature('1.5').status, STATUS.PASSED);
-    assert.equal(store.getFeature('1.6').status, STATUS.MANUAL);
-    assert.equal(store.getFeature('3.4').status, STATUS.FALSE_GREEN);
+    assert.equal(store.getFeature('1.5', 'todo').status, STATUS.PASSED);
+    assert.equal(store.getFeature('1.6', 'todo').status, STATUS.MANUAL);
+    assert.equal(store.getFeature('3.4', 'todo').status, STATUS.FALSE_GREEN);
     const flows = store.listFlows('1.5');
     assert.equal(flows[0].path, 'maestro/todo/list-drag-sort.yaml');
   });
