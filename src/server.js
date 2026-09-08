@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createApp } from './http.js';
 import { openDb } from './db.js';
@@ -7,13 +8,13 @@ import { createStore } from './store.js';
 import { importIfEmpty, syncFlowBindings } from './importer.js';
 import { newToken } from './auth.js';
 import { PORT, HOST, DEFAULT_MODULES } from './constants.js';
-import { appRoot, regressionRoot, dataDir } from './paths.js';
+import { appRoot, regressionRoot, dbFile } from './paths.js';
 import { createRunner, resolveMaestroBin } from './runner.js';
 import { exportSnapshot } from './exporter.js';
 
-fs.mkdirSync(dataDir, { recursive: true });
+fs.mkdirSync(path.dirname(dbFile), { recursive: true });
 
-const store = createStore(openDb(dataDir + '/console.db'));
+const store = createStore(openDb(dbFile));
 importIfEmpty(store);
 syncFlowBindings(store);
 

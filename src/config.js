@@ -26,6 +26,27 @@ export function loadConfig(regressionRoot) {
  * @param {string} regressionRoot
  * @returns {string} 绝对路径
  */
+/**
+ * SQLite 落盘位置。
+ *
+ * 默认仍在控制台的 `data/console.db`。外置只为将来按项目分库留口子
+ * （如 `data/<appId>/console.db`），现在不分区也完全能用。
+ *
+ * 优先级：环境变量 REGRESSION_DB_PATH > regression.config.json 的 dbPath > 默认
+ *
+ * @param {string} regressionRoot
+ * @returns {string} 数据库文件绝对路径
+ */
+export function resolveDbPath(regressionRoot) {
+  const config = loadConfig(regressionRoot);
+  const raw = process.env.REGRESSION_DB_PATH || config.dbPath || 'data/console.db';
+  return path.isAbsolute(raw) ? raw : path.resolve(regressionRoot, raw);
+}
+
+/**
+ * @param {string} regressionRoot
+ * @returns {string} 绝对路径
+ */
 export function resolveAppRoot(regressionRoot) {
   const config = loadConfig(regressionRoot);
   // 默认：控制台位于 <项目>/tools/ 下，从控制台根上两级回到项目根。
