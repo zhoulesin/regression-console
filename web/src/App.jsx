@@ -3,12 +3,17 @@ import {
   analyzeStreamUrl,
   api,
   bootstrapToken,
+  getCatalogPending,
   getSavedModule,
+  postCatalogApply,
+  postCatalogPropose,
+  postCatalogReject,
   saveModule,
   streamUrl,
   withModule,
 } from './api.js';
 import { AttemptTimeline } from './AttemptTimeline.jsx';
+import { CatalogPanel } from './CatalogPanel.jsx';
 import { CurrentDetail } from './CurrentDetail.jsx';
 import { StepModal } from './StepModal.jsx';
 import { resolveCurrentStep } from './attemptViewModel.js';
@@ -290,6 +295,13 @@ export default function App() {
   const [stepModal, setStepModal] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState({});
   const [modalLoading, setModalLoading] = useState(false);
+  const [catalogMode, setCatalogMode] = useState(false);
+  const [catalogPending, setCatalogPending] = useState(null);
+  const [catalogDraft, setCatalogDraft] = useState(null);
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogAnalyzing, setCatalogAnalyzing] = useState(false);
+  const [catalogLogs, setCatalogLogs] = useState('');
   const esRef = useRef(null);
   const analyzeEsRef = useRef(null);
   const currentDetailRef = useRef(null);
@@ -299,6 +311,22 @@ export default function App() {
   useEffect(() => {
     bootstrapToken();
   }, []);
+
+  useEffect(() => {
+    async function checkCatalogPending() {
+      try {
+        const data = await getCatalogPending(moduleId);
+        if (data.session) {
+          setCatalogMode(true);
+          setCatalogPending(data.session);
+          setCatalogDraft(data.draft);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    checkCatalogPending();
+  }, [moduleId]);
 
   function switchModule(id) {
     saveModule(id);
@@ -774,6 +802,59 @@ export default function App() {
     }
   }
 
+  async function handleCatalogPropose(hint) {
+    setCatalogBusy(true);
+    setCatalogError('');
+    setCatalogAnalyzing(true);
+    setCatalogLogs('');
+    try {
+      const data = await postCatalogPropose(moduleId, hint);
+      setCatalogPending(data.session);
+      setCatalogDraft(data.draft);
+      setCatalogLogs('');
+    } catch (e) {
+      setCatalogError(String(e.message || e));
+    } finally {
+      setCatalogBusy(false);
+      setCatalogAnalyzing(false);
+    }
+  }
+
+  async function handleCatalogApply(sessionId) {
+    setCatalogBusy(true);
+    setCatalogError('');
+    try {
+      await postCatalogApply(moduleId, sessionId);
+      setCatalogMode(false);
+      setCatalogPending(null);
+      setCatalogDraft(null);
+      await refresh();
+    } catch (e) {
+      setCatalogError(String(e.message || e));
+    } finally {
+      setCatalogBusy(false);
+    }
+  }
+
+  async function handleCatalogReject(sessionId, note) {
+    setCatalogBusy(true);
+    setCatalogError('');
+    try {
+      await postCatalogReject(moduleId, sessionId, note);
+      setCatalogPending(null);
+      setCatalogDraft(null);
+    } catch (e) {
+      setCatalogError(String(e.message || e));
+    } finally {
+      setCatalogBusy(false);
+    }
+  }
+
+  function handleCatalogBack() {
+    setCatalogMode(false);
+    setCatalogError('');
+  }
+
   return (
     <div className="app">
       <div className="topbar">
@@ -812,6 +893,18 @@ export default function App() {
 
       <div className="board">
         <aside className="col-left">
+          <div className="catalog-entry">
+            <button
+              type="button"
+              className={catalogMode ? 'active' : ''}
+              onClick={() => {
+                setCatalogMode(!catalogMode);
+                setCatalogError('');
+              }}
+            >
+              + 补功能点
+            </button>
+          </div>
           {byChapter.map(([chapter, rows]) => (
             <div className="chapter" key={chapter}>
               <div className="chapter-hd">
@@ -845,7 +938,21 @@ export default function App() {
         </aside>
 
         <section className="col-right">
-          {!selected ? (
+          {catalogMode ? (
+            <CatalogPanel
+              moduleId={moduleId}
+              pending={catalogPending}
+              draft={catalogDraft}
+              busy={catalogBusy}
+              error={catalogError}
+              analyzing={catalogAnalyzing}
+              analyzeLogs={catalogLogs}
+              onPropose={handleCatalogPropose}
+              onApply={handleCatalogApply}
+              onReject={handleCatalogReject}
+              onBack={handleCatalogBack}
+            />
+          ) : !selected ? (
             <div className="empty">选择左侧功能点</div>
           ) : (
             <>

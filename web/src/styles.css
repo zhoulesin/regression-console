@@ -999,3 +999,272 @@ button.attempt-step.current {
     align-items: flex-start;
   }
 }
+
+/* Catalog */
+.catalog-entry {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.catalog-entry button {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.catalog-entry button:hover {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.catalog-entry button.active {
+  background: var(--ok);
+  border-color: var(--ok);
+  border-style: solid;
+  color: #fff;
+}
+
+.catalog-panel {
+  padding: 20px;
+  overflow: auto;
+  flex: 1;
+}
+
+.catalog-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.catalog-hd h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.back-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.catalog-hint-section {
+  margin-bottom: 24px;
+}
+
+.catalog-hint-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.catalog-hint-section textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--txt);
+  resize: vertical;
+  font: inherit;
+}
+
+.catalog-hint-section textarea:focus {
+  outline: none;
+  border-color: var(--hand);
+}
+
+.hint-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.hint-footer span {
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+
+.catalog-generating {
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.generating-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.generating-logs {
+  padding: 12px;
+  background: var(--panel2);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.catalog-review {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.catalog-rationale {
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.catalog-rationale h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.catalog-rationale p {
+  margin: 0;
+  color: var(--txt);
+}
+
+.catalog-features h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+}
+
+.feature-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.catalog-feature-card {
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-header .code {
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.card-header .chapter {
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+
+.catalog-feature-card .title {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.catalog-feature-card .criteria,
+.catalog-feature-card .precondition {
+  font-size: 0.9rem;
+  color: var(--txt);
+  margin-bottom: 4px;
+}
+
+.catalog-feature-card .label {
+  color: var(--faint);
+}
+
+.catalog-skipped h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.skipped-group {
+  margin-bottom: 8px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.skipped-group summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.skipped-items {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.skipped-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.skipped-item .code {
+  color: var(--faint);
+  min-width: 40px;
+}
+
+.skipped-item .detail {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+
+.catalog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.reject-section {
+  display: flex;
+  gap: 12px;
+}
+
+.reject-section textarea {
+  flex: 1;
+  min-height: 60px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--txt);
+  resize: vertical;
+  font: inherit;
+}
+
+.reject-section textarea:focus {
+  outline: none;
+  border-color: var(--warn);
+}

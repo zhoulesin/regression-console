@@ -65,3 +65,28 @@ export function analyzeStreamUrl() {
   const token = encodeURIComponent(getToken());
   return `/api/analyze/stream?token=${token}`;
 }
+
+export async function getCatalogPending(module) {
+  return api(withModule('/api/catalog/pending', module));
+}
+
+export async function postCatalogPropose(module, hint) {
+  return api(withModule('/api/catalog/propose', module), {
+    method: 'POST',
+    body: JSON.stringify({ hint }),
+  });
+}
+
+export async function postCatalogApply(module, sessionId) {
+  return api(withModule('/api/catalog/apply', module), {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function postCatalogReject(module, sessionId, note) {
+  return api(withModule('/api/catalog/reject', module), {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, note }),
+  });
+}
