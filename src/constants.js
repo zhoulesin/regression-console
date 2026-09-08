@@ -11,12 +11,15 @@ export const STATUS = {
   FALSE_GREEN: '假绿',
 };
 
-/** 业务模块：看板顶栏切换；章节号只在模块内有效 */
-export const MODULES = [
+/** 默认模块，首次启动时导入到 module_meta */
+export const DEFAULT_MODULES = [
   { id: 'todo', title: 'Todo' },
   { id: 'routine', title: 'Routine' },
   { id: 'chore', title: 'Chore' },
 ];
+
+/** @deprecated 使用 store.listModules() 获取动态模块列表 */
+export const MODULES = DEFAULT_MODULES;
 
 export const DEFAULT_MODULE = 'todo';
 

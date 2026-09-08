@@ -1268,3 +1268,47 @@ button.attempt-step.current {
   outline: none;
   border-color: var(--warn);
 }
+
+/* Module management */
+.module-add {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.module-add:hover {
+  opacity: 1;
+}
+
+.module-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.module-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.module-form input {
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--txt);
+  font: inherit;
+}
+
+.module-form input:focus {
+  outline: none;
+  border-color: var(--hand);
+}
+
+.module-form small {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 400;
+}

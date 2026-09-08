@@ -6,7 +6,7 @@ import { openDb } from './db.js';
 import { createStore } from './store.js';
 import { importIfEmpty, syncFlowBindings } from './importer.js';
 import { newToken } from './auth.js';
-import { PORT, HOST } from './constants.js';
+import { PORT, HOST, DEFAULT_MODULES } from './constants.js';
 import { appRoot, regressionRoot, dataDir } from './paths.js';
 import { loadConfig } from './config.js';
 import {
@@ -24,6 +24,17 @@ const config = loadConfig(regressionRoot);
 const store = createStore(openDb(dataDir + '/console.db'));
 importIfEmpty(store);
 syncFlowBindings(store);
+
+// 导入默认模块（todo/routine/chore）
+for (const mod of DEFAULT_MODULES) {
+  try {
+    store.createModule(mod);
+  } catch (e) {
+    // 409 = 已存在，忽略
+    if (!String(e.message).includes('409')) throw e;
+  }
+}
+
 const token = newToken();
 const exportFn = () => exportSnapshot({ store, repoRoot: regressionRoot });
 const runner = createRunner({

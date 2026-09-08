@@ -6,6 +6,7 @@ import {
   CATALOG_FEATURE_CODE,
   CHAPTER_TITLES,
   DEFAULT_MODULE,
+  DEFAULT_MODULES,
   MODULES,
   STATUS,
 } from './constants.js';
@@ -143,7 +144,48 @@ export function createApp({
   api.use(tokenMiddleware(token));
 
   api.get('/modules', (_req, res) => {
-    res.json({ modules: MODULES, defaultModule: DEFAULT_MODULE });
+    try {
+      let modules = store.listModules();
+      // 如果数据库中没有模块，返回硬编码的默认模块
+      if (modules.length === 0) {
+        modules = DEFAULT_MODULES.map((m) => ({
+          module: m.id,
+          title: m.title,
+        }));
+      }
+      const result = modules.map((m) => ({
+        id: m.module,
+        title: m.title,
+        source: DEFAULT_MODULES.some((d) => d.id === m.module) ? 'builtin' : 'custom',
+      }));
+      res.json({ modules: result, defaultModule: DEFAULT_MODULE });
+    } catch (err) {
+      sendError(err, res);
+    }
+  });
+
+  api.post('/modules', (req, res) => {
+    try {
+      const { id, title } = req.body ?? {};
+
+      if (!id || typeof id !== 'string') {
+        throw new Error('400: 模块 ID 必填');
+      }
+      if (!/^[a-z0-9-]{2,20}$/.test(id)) {
+        throw new Error('400: 模块 ID 只能是小写字母/数字/连字符，长度 2-20');
+      }
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        throw new Error('400: 模块标题必填');
+      }
+      if (title.length > 50) {
+        throw new Error('400: 模块标题最多 50 字');
+      }
+
+      const mod = store.createModule({ id, title: title.trim() });
+      res.json({ module: mod });
+    } catch (err) {
+      sendError(err, res);
+    }
   });
 
   api.get('/features', (req, res) => {

@@ -90,3 +90,14 @@ export async function postCatalogReject(module, sessionId, note) {
     body: JSON.stringify({ sessionId, note }),
   });
 }
+
+export async function getModules() {
+  return api('/api/modules');
+}
+
+export async function createModule(id, title) {
+  return api('/api/modules', {
+    method: 'POST',
+    body: JSON.stringify({ id, title }),
+  });
+}

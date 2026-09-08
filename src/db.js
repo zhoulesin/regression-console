@@ -315,6 +315,12 @@ function migrate(db) {
     db.exec(`ALTER TABLE run ADD COLUMN attempt_id INTEGER`);
   }
 
+  // module_meta 添加 title 字段用于动态模块管理
+  const metaCols = db.prepare(`PRAGMA table_info(module_meta)`).all().map((c) => c.name);
+  if (metaCols.length && !metaCols.includes('title')) {
+    db.exec(`ALTER TABLE module_meta ADD COLUMN title TEXT NOT NULL DEFAULT ''`);
+  }
+
   backfillWorkflowAttempts(db);
   dedupeFlowBindings(db);
 }

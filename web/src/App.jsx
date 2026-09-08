@@ -4,7 +4,9 @@ import {
   api,
   bootstrapToken,
   getCatalogPending,
+  getModules,
   getSavedModule,
+  createModule,
   postCatalogApply,
   postCatalogPropose,
   postCatalogReject,
@@ -18,7 +20,7 @@ import { CurrentDetail } from './CurrentDetail.jsx';
 import { StepModal } from './StepModal.jsx';
 import { resolveCurrentStep } from './attemptViewModel.js';
 
-const MODULES = [
+const DEFAULT_MODULES = [
   { id: 'todo', title: 'Todo' },
   { id: 'routine', title: 'Routine' },
   { id: 'chore', title: 'Chore' },
@@ -302,6 +304,11 @@ export default function App() {
   const [catalogError, setCatalogError] = useState('');
   const [catalogAnalyzing, setCatalogAnalyzing] = useState(false);
   const [catalogLogs, setCatalogLogs] = useState('');
+  const [modules, setModules] = useState(DEFAULT_MODULES);
+  const [showAddModule, setShowAddModule] = useState(false);
+  const [newModuleId, setNewModuleId] = useState('');
+  const [newModuleTitle, setNewModuleTitle] = useState('');
+  const [moduleError, setModuleError] = useState('');
   const esRef = useRef(null);
   const analyzeEsRef = useRef(null);
   const currentDetailRef = useRef(null);
@@ -310,6 +317,20 @@ export default function App() {
 
   useEffect(() => {
     bootstrapToken();
+  }, []);
+
+  useEffect(() => {
+    async function loadModules() {
+      try {
+        const data = await getModules();
+        if (data.modules && data.modules.length > 0) {
+          setModules(data.modules);
+        }
+      } catch {
+        // fallback to defaults
+      }
+    }
+    loadModules();
   }, []);
 
   useEffect(() => {
@@ -855,6 +876,34 @@ export default function App() {
     setCatalogError('');
   }
 
+  async function handleCreateModule() {
+    const id = newModuleId.trim().toLowerCase();
+    const title = newModuleTitle.trim();
+
+    setModuleError('');
+
+    if (!id || !/^[a-z0-9-]{2,20}$/.test(id)) {
+      setModuleError('ID 只能是小写字母/数字/连字符，长度 2-20');
+      return;
+    }
+    if (!title) {
+      setModuleError('标题必填');
+      return;
+    }
+
+    try {
+      await createModule(id, title);
+      const data = await getModules();
+      setModules(data.modules || DEFAULT_MODULES);
+      setShowAddModule(false);
+      setNewModuleId('');
+      setNewModuleTitle('');
+      switchModule(id);
+    } catch (e) {
+      setModuleError(String(e.message || e));
+    }
+  }
+
   return (
     <div className="app">
       <div className="topbar">
@@ -879,7 +928,7 @@ export default function App() {
       </div>
 
       <div className="module-tabs">
-        {MODULES.map((m) => (
+        {modules.map((m) => (
           <button
             key={m.id}
             type="button"
@@ -889,6 +938,13 @@ export default function App() {
             {m.title}
           </button>
         ))}
+        <button
+          type="button"
+          className="module-add"
+          onClick={() => setShowAddModule(true)}
+        >
+          +
+        </button>
       </div>
 
       <div className="board">
@@ -1688,6 +1744,51 @@ export default function App() {
           )}
         </section>
       </div>
+
+      {showAddModule && (
+        <div className="modal-backdrop" onClick={() => setShowAddModule(false)}>
+          <div className="step-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="step-modal-hd">
+              <h3>添加新模块</h3>
+              <button onClick={() => setShowAddModule(false)}>×</button>
+            </div>
+            <div className="step-modal-body">
+              {moduleError && <div className="err">{moduleError}</div>}
+              <div className="module-form">
+                <label>
+                  模块 ID
+                  <input
+                    type="text"
+                    value={newModuleId}
+                    onChange={(e) => setNewModuleId(e.target.value)}
+                    placeholder="例如：shopping"
+                    pattern="[a-z0-9-]{2,20}"
+                  />
+                  <small>小写字母/数字/连字符，长度 2-20</small>
+                </label>
+                <label>
+                  模块标题
+                  <input
+                    type="text"
+                    value={newModuleTitle}
+                    onChange={(e) => setNewModuleTitle(e.target.value)}
+                    placeholder="例如：购物清单"
+                    maxLength={50}
+                  />
+                </label>
+                <div className="flow-actions">
+                  <button className="primary" onClick={handleCreateModule}>
+                    创建
+                  </button>
+                  <button onClick={() => setShowAddModule(false)}>
+                    取消
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

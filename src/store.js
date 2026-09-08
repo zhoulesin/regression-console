@@ -106,6 +106,13 @@ export function createStore(db) {
   const getModuleMetaStmt = db.prepare(
     'SELECT * FROM module_meta WHERE module = ?',
   );
+  const listModulesStmt = db.prepare(
+    'SELECT module, title, notes, chapters_json, updated_at FROM module_meta ORDER BY module',
+  );
+  const insertModuleStmt = db.prepare(`
+    INSERT INTO module_meta (module, title, notes, chapters_json, updated_at)
+    VALUES (@module, @title, '', '{}', @updated_at)
+  `);
   const upsertModuleMetaStmt = db.prepare(`
     INSERT INTO module_meta (module, notes, chapters_json, updated_at)
     VALUES (@module, @notes, @chapters_json, @updated_at)
@@ -546,6 +553,20 @@ export function createStore(db) {
         ...meta,
         chapters: JSON.parse(meta.chapters_json || '{}'),
       };
+    },
+
+    listModules() {
+      return listModulesStmt.all();
+    },
+
+    createModule({ id, title }) {
+      const existing = getModuleMetaStmt.get(id);
+      if (existing) {
+        throw new Error('409: 模块 ID 已存在');
+      }
+      const updated_at = new Date().toISOString();
+      insertModuleStmt.run({ module: id, title, updated_at });
+      return getModuleMetaStmt.get(id);
     },
 
     appendModuleNote(module = DEFAULT_MODULE, note) {
