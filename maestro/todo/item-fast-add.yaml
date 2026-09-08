@@ -19,14 +19,15 @@ name: Todo fast add in fixture list
             text: "E2E Todo"
 - tapOn:
     id: "com.cozyla.choresreward:id/et_content"
-- inputText: "E2E_Fast"
+- inputText: "E2EFast"
 - tapOn:
     id: "com.cozyla.choresreward:id/iv_confirm"
-# 结果必须落在夹具那张卡里；全屏出现 "E2E_Fast" 不算通过。
+# 结果必须落在夹具那张卡里；全屏出现 "E2EFast" 不算通过。
+# 改用 E2EFast（无下划线）避免中文输入法将半角 _ 自动转为全角 ＿ 导致断言失败。
 - extendedWaitUntil:
     visible:
       id: "com.cozyla.choresreward:id/tv_todo_info_title"
-      text: "E2E_Fast"
+      text: "E2EFast"
       childOf:
         containsDescendants:
           - id: "com.cozyla.choresreward:id/tv_todolist_title"

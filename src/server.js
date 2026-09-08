@@ -8,18 +8,10 @@ import { importIfEmpty, syncFlowBindings } from './importer.js';
 import { newToken } from './auth.js';
 import { PORT, HOST, DEFAULT_MODULES } from './constants.js';
 import { appRoot, regressionRoot, dataDir } from './paths.js';
-import { loadConfig } from './config.js';
-import {
-  analyzeWithClaude,
-  catalogWithClaude,
-  diagnoseWithClaude,
-} from './claudeProvider.js';
-import { createAnalyzeHub } from './analyzeHub.js';
 import { createRunner, resolveMaestroBin } from './runner.js';
 import { exportSnapshot } from './exporter.js';
 
 fs.mkdirSync(dataDir, { recursive: true });
-const config = loadConfig(regressionRoot);
 
 const store = createStore(openDb(dataDir + '/console.db'));
 importIfEmpty(store);
@@ -43,47 +35,12 @@ const runner = createRunner({
   maestroBin: resolveMaestroBin(),
   exportFn,
 });
-const analyzeHub = createAnalyzeHub();
 const app = createApp({
   store,
   repoRoot: appRoot,
   flowRoot: regressionRoot,
   token,
   runner,
-  analyzeHub,
-  analyzeFn: ({ feature, priorRun, priorDiagnosis }) =>
-    analyzeWithClaude({
-      appRoot,
-      flowRoot: regressionRoot,
-      feature,
-      priorRun,
-      priorDiagnosis,
-      onData: (chunk) => analyzeHub.push(chunk),
-      registerChild: (child) => analyzeHub.setChild(child),
-    }),
-  catalogFn: ({ module, hint, moduleNotes, existingFeatures }) =>
-    catalogWithClaude({
-      appRoot,
-      flowRoot: regressionRoot,
-      module,
-      hint,
-      moduleNotes,
-      existingFeatures,
-      sourceDirs: config.sourceDirs,
-      onData: (chunk) => analyzeHub.push(chunk),
-      registerChild: (child) => analyzeHub.setChild(child),
-    }),
-  diagnoseFn: ({ feature, run, flowPath, history, hint }) =>
-    diagnoseWithClaude({
-      flowRoot: regressionRoot,
-      feature,
-      run,
-      flowPath,
-      history,
-      hint,
-      onData: (chunk) => analyzeHub.push(chunk),
-      registerChild: (child) => analyzeHub.setChild(child),
-    }),
   exportFn,
 });
 const server = http.createServer(app);

@@ -6,7 +6,9 @@
     "test": "node --test test/*.test.js",
     "build-ui": "npm --prefix web run build",
     "start": "npm run build-ui && node src/server.js",
-    "dev": "node src/server.js"
+    "dev": "node src/server.js",
+    "status": "node src/cli/status.js",
+    "validate": "node src/cli/validate.js"
   },
   "engines": {
     "node": ">=24"

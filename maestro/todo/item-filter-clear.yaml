@@ -1,0 +1,81 @@
+appId: com.cozyla.choresreward
+name: Todo clear member filter restores all items
+---
+# 功能点 5.2：清除筛选。
+# 验证：按成员筛选后清除 → 恢复显示全部 Todo。
+
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+# ── 快速添加一条 Todo ──
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+    childOf:
+      containsChild:
+        id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_content"
+- inputText: "E2EFilter"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_confirm"
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2EFilter"
+    timeout: 5000
+
+# ── 按成员筛选 ──
+# 点击 Filter 按钮打开筛选弹窗
+- tapOn:
+    id: "com.cozyla.choresreward:id/llFilter"
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/rvPopupMember"
+    timeout: 3000
+
+# 选择第一个成员（筛选后只显示该成员的 Todo）
+- tapOn:
+    id: "com.cozyla.choresreward:id/imgMemberAvatar"
+    index: 0
+    childOf:
+      id: "com.cozyla.choresreward:id/rvPopupMember"
+
+# 等待筛选生效
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# ── 记录筛选后状态：E2EFilter 未指派成员，应被过滤掉 ──
+- assertNotVisible:
+    text: "E2EFilter"
+
+# ── 清除筛选：再次打开筛选弹窗，点击已选成员取消 ──
+- tapOn:
+    id: "com.cozyla.choresreward:id/llFilter"
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/rvPopupMember"
+    timeout: 3000
+
+# 再次点击同一个成员取消筛选
+- tapOn:
+    id: "com.cozyla.choresreward:id/imgMemberAvatar"
+    index: 0
+    childOf:
+      id: "com.cozyla.choresreward:id/rvPopupMember"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# ── 判定：清除筛选后恢复全部显示 ──
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2EFilter"
+    timeout: 5000
