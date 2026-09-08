@@ -6,10 +6,8 @@ export const regressionRoot = path.resolve(import.meta.dirname, '..');
 export const dataDir = path.resolve(import.meta.dirname, '../data');
 
 /**
- * Android 项目根：读取源码上下文。
- *
- * 不再依赖 ../../.. 的目录层级——由 regression.config.json 的 appRoot
- * 或环境变量 REGRESSION_APP_ROOT 指定，控制台可以放在仓库外。
+ * Android 项目根：读取源码上下文。**未配置时为 `null`** —— 不再回退目录层级，
+ * 由 regression.config.json 的 appRoot 或环境变量 REGRESSION_APP_ROOT 指定。
  */
 export const appRoot = resolveAppRoot(regressionRoot);
 

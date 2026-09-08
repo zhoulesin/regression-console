@@ -44,13 +44,31 @@ export function resolveDbPath(regressionRoot) {
 }
 
 /**
+ * 被测项目根。**没有默认值** —— 未配置时返回 `null`，调用方必须显式处理。
+ *
+ * 过去默认回退 `../..`（控制台位于 项目/tools/ 下的旧布局），控制台搬到独立
+ * 仓库后这个层级推导会指向一个完全不相干的目录，宁可报错也不能猜。
+ *
  * @param {string} regressionRoot
- * @returns {string} 绝对路径
+ * @param {object} env
+ * @returns {string | null} 绝对路径，或 null（未配置）
  */
-export function resolveAppRoot(regressionRoot) {
+export function resolveAppRoot(regressionRoot, env = process.env) {
   const config = loadConfig(regressionRoot);
-  // 默认：控制台位于 <项目>/tools/ 下，从控制台根上两级回到项目根。
-  // （旧实现从 src/ 出发用 '../../..'，层级一样，换成控制台根后是 '../..'）
-  const raw = process.env.REGRESSION_APP_ROOT || config.appRoot || '../..';
+  const raw = (env.REGRESSION_APP_ROOT || config.appRoot || '').trim();
+  if (!raw) return null;
   return path.isAbsolute(raw) ? raw : path.resolve(regressionRoot, raw);
+}
+
+/**
+ * manifest 相对 DUT 的路径（不是相对控制台）。
+ *
+ * @param {string} regressionRoot
+ * @param {object} env
+ * @returns {string} 相对路径
+ */
+export function resolveManifestPath(regressionRoot, env = process.env) {
+  const config = loadConfig(regressionRoot);
+  const raw = typeof config.manifestPath === 'string' ? config.manifestPath.trim() : '';
+  return raw || 'regression.manifest.json';
 }
