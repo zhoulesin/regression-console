@@ -99,9 +99,9 @@ export function normalizeManifest(draft, { appRoot }) {
         throw invalid(`feature ${code} 的 flow 必须是 .yaml/.yml：${rawFlow}`);
       }
       flow = path.normalize(rel).split(path.sep).join('/').replace(/^\.\//, '');
-    } else if (!manual) {
-      throw invalid(`feature ${code} 缺少 flow（若只能手测请标 manual: true）`);
     }
+    // 无 flow 是合法状态：manual 表示「只能手测」，无 flow 的非 manual 项
+    // 表示「脚本还没写」——sync 会把 runnable 置 0，前端按 FLOW_MISSING 提示。
 
     return {
       module,

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { CHAPTER_TITLES, STATUS } from './constants.js';
+import { STATUS } from './constants.js';
 
 const MD_SECTION3_START = '## 三、功能点清单';
 
@@ -91,10 +91,10 @@ function buildMarkdownSection3(store) {
     lines.push(`### 模块 \`${moduleId}\``);
     lines.push('');
     const byChapter = groupByChapter(moduleFeatures);
+    const chapterTitles = store.getModuleMeta(moduleId).chapters;
     for (const chapter of [...byChapter.keys()].sort((a, b) => a - b)) {
       const rows = byChapter.get(chapter);
-      const title =
-        CHAPTER_TITLES[moduleId]?.[chapter] ?? `第 ${chapter} 章`;
+      const title = chapterTitles[String(chapter)] ?? `第 ${chapter} 章`;
       const pre = rows[0]?.precondition ? `（${rows[0].precondition}）` : '';
       lines.push(`#### 第 ${chapter} 章　${title}${pre}`);
       lines.push('');
@@ -297,9 +297,8 @@ function buildGeneratedBody(store) {
 
   for (const chapter of [...byChapter.keys()].sort((a, b) => a - b)) {
     const rows = byChapter.get(chapter);
-    const title =
-      CHAPTER_TITLES[rows[0]?.module || 'todo']?.[chapter] ??
-      `第 ${chapter} 章`;
+    const chapterTitles = store.getModuleMeta(rows[0]?.module ?? '').chapters;
+    const title = chapterTitles[String(chapter)] ?? `第 ${chapter} 章`;
     const chapPassed = rows.filter((r) => r.status === STATUS.PASSED).length;
     const pct =
       rows.length === 0 ? 0 : Math.round((chapPassed / rows.length) * 100);

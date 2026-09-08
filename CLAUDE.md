@@ -14,20 +14,20 @@
 
 ```
 regression-console/
-├── src/                    # Node.js 后端
-│   ├── catalog.js         # 目录扫描与分析
-│   └── seed/              # 测试数据种子
+├── src/                    # Node.js 后端（同步 / 执行 / 记账）
+├── scripts/               # 一次性迁移等工具脚本
 ├── web/                   # React 前端
 │   ├── src/
 │   │   ├── App.jsx        # 主应用
-│   │   ├── CatalogPanel.jsx  # 目录面板
+│   │   ├── CatalogPanel.jsx  # 只读目录面板
 │   │   └── styles.css     # 样式
 │   └── dist/              # 构建产物
-├── maestro/               # Maestro 脚本
-│   ├── todo/              # Todo 模块脚本
-│   └── subflows/          # 子流程
+├── test/fixtures/app/     # 单测夹具（唯一随仓的 yaml）
 └── regression.config.json # 本地配置（.gitignore）
 ```
+
+> 功能点清单 `regression.manifest.json` 与 Maestro 脚本 `maestro/` **归被测项目（DUT）所有**，
+> 不在本仓库。控制台只读 DUT、只写本仓 SQLite。
 
 ## 核心概念
 
@@ -71,8 +71,9 @@ maestro test maestro/cold-launch.yaml                    # 冷启动测试
 ### regression.config.json
 ```json
 {
-  "appRoot": "/absolute/path/to/choresReward",  // 被测项目路径
-  "sourceDirs": ["app/src/main/java"]           // catalog 扫描目录
+  "appRoot": "/absolute/path/to/choresReward",  // 必填：被测项目（DUT）根
+  "manifestPath": "regression.manifest.json",   // 可选：相对 appRoot
+  "sourceDirs": {}                              // 当前未使用
 }
 ```
 

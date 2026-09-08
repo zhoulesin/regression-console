@@ -52,10 +52,9 @@ export function syncFromManifest({
     store.hideModulesNotIn(moduleIds);
 
     for (const f of manifest.features) {
-      // manual 项（只能手测）不检查 yaml；其余按文件是否真实存在决定 runnable
-      const runnable = f.manual
-        ? 0
-        : fs.existsSync(path.join(appRoot, f.flow))
+      // manual 项（只能手测）与还没写脚本的项都不检查文件，一律 runnable=0
+      const runnable =
+        !f.manual && f.flow && fs.existsSync(path.join(appRoot, f.flow))
           ? 1
           : 0;
       store.upsertFeature({

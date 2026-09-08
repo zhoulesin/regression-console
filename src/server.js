@@ -5,33 +5,34 @@ import { spawn } from 'node:child_process';
 import { createApp } from './http.js';
 import { openDb } from './db.js';
 import { createStore } from './store.js';
-import { importIfEmpty, syncFlowBindings } from './importer.js';
 import { newToken } from './auth.js';
-import { PORT, HOST, DEFAULT_MODULES } from './constants.js';
+import { PORT, HOST } from './constants.js';
 import {
   appRoot,
   regressionRoot,
   dbFile,
   manifestPath,
 } from './paths.js';
-import { resolveManifestPath } from './config.js';
 import { createRunner, resolveMaestroBin } from './runner.js';
 import { exportSnapshot } from './exporter.js';
+import { syncFromManifest } from './sync.js';
 
 fs.mkdirSync(path.dirname(dbFile), { recursive: true });
 
 const store = createStore(openDb(dbFile));
-importIfEmpty(store);
-syncFlowBindings(store);
 
-// 导入默认模块（todo/routine/chore）
-for (const mod of DEFAULT_MODULES) {
+// 功能点清单的真源在被测仓：启动时同步一次，失败保留上次快照（fail-closed）
+if (appRoot) {
   try {
-    store.createModule(mod);
+    const r = syncFromManifest({ store, appRoot, manifestPath });
+    console.log(
+      `manifest 同步完成：${r.modules} 个模块 / ${r.features} 条功能点`,
+    );
   } catch (e) {
-    // 409 = 已存在，忽略
-    if (!String(e.message).includes('409')) throw e;
+    console.error(`manifest 同步失败（保留上次快照）：${String(e.message || e)}`);
   }
+} else {
+  console.error('未配置 appRoot，跳过 manifest 同步。请在 regression.config.json 配置。');
 }
 
 const token = newToken();
@@ -42,7 +43,7 @@ const runner = createRunner({
   maestroBin: resolveMaestroBin(),
   exportFn,
   // appId/device 由清单提供，DUT manifest 就绪后从 sync 结果透传；
-  // 目前清单未建，先保持空串（不注入 -e，行为与旧版一致）
+  // 目前保持空串（不注入 -e，行为与旧版一致）
   appId: '',
   device: '',
 });

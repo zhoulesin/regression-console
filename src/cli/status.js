@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-
 /**
  * 回归覆盖状态 CLI
+ *
+ * 数据源：被测仓的 regression.manifest.json（清单）+ 本仓 SQLite（执行状态）。
  *
  * 用法：
  *   node src/cli/status.js                # 全部模块
@@ -11,140 +12,100 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { SEED_FEATURES, FLOW_BINDINGS } from '../seed/index.js';
+import Database from 'better-sqlite3';
+import { appRoot, dbFile, manifestPath } from '../paths.js';
+import { readManifestFile } from '../manifest.js';
 
-const moduleFilter = process.argv[2] || '';
+const moduleFilter = process.argv[2] && !process.argv[2].startsWith('--')
+  ? process.argv[2]
+  : '';
 const jsonMode = process.argv.includes('--json');
 
-// 收集已有 Maestro 脚本
-function listMaestroScripts(dir) {
-  const scripts = new Map(); // path → exists
-  try {
-    for (const entry of fs.readdirSync(dir, { recursive: true })) {
-      const full = path.join(dir, entry);
-      if (fs.statSync(full).isFile() && entry.endsWith('.yaml') && !entry.includes('/subflows/')) {
-        scripts.set(full.replace(dir + '/', ''), true);
-      }
-    }
-  } catch {}
-  return scripts;
+if (!appRoot) {
+  console.error('未配置 appRoot（regression.config.json），无法读取清单。');
+  process.exit(1);
 }
 
-const regressionRoot = path.resolve(import.meta.dirname, '../..');
-const maestroDir = path.join(regressionRoot, 'maestro');
+let manifest;
+try {
+  manifest = readManifestFile(appRoot, manifestPath);
+} catch (e) {
+  console.error(`读取 manifest 失败：${String(e.message || e)}`);
+  process.exit(1);
+}
 
-// 按模块分组
+// 执行状态来自控制台库（清单不持有状态）
+let statusByCode = new Map();
+let notesByCode = new Map();
+if (fs.existsSync(dbFile)) {
+  const db = new Database(dbFile, { readonly: true });
+  for (const row of db
+    .prepare('SELECT module, code, status, notes FROM feature')
+    .all()) {
+    statusByCode.set(`${row.module}|${row.code}`, row.status);
+    notesByCode.set(`${row.module}|${row.code}`, row.notes);
+  }
+}
+
 const modules = {};
-for (const f of SEED_FEATURES) {
+for (const f of manifest.features) {
   if (moduleFilter && f.module !== moduleFilter) continue;
   if (!modules[f.module]) modules[f.module] = [];
   modules[f.module].push(f);
 }
 
-// 按模块收集脚本
-const moduleScripts = {};
-for (const mod of Object.keys(modules)) {
-  const dir = path.join(maestroDir, mod);
-  moduleScripts[mod] = listMaestroScripts(dir);
-}
-
-// 按模块收集绑定
-const moduleBindings = {};
-for (const b of FLOW_BINDINGS) {
-  if (moduleFilter && b.feature_module !== moduleFilter) continue;
-  if (!moduleBindings[b.feature_module]) moduleBindings[b.feature_module] = new Set();
-  moduleBindings[b.feature_module].add(b.feature_code);
-}
-
-// 子流程
-const subflows = [];
-try {
-  for (const entry of fs.readdirSync(path.join(maestroDir, 'todo', 'subflows'))) {
-    if (entry.endsWith('.yaml')) subflows.push(`maestro/todo/subflows/${entry}`);
-  }
-} catch {}
-
 if (jsonMode) {
-  // JSON 输出：供 skill 消费
   const output = {};
   for (const [mod, features] of Object.entries(modules)) {
-    const bindings = moduleBindings[mod] || new Set();
-    const scripts = moduleScripts[mod] || new Map();
     output[mod] = {
       features: features.map((f) => ({
         code: f.code,
         chapter: f.chapter,
         title: f.title,
-        status: f.status,
-        hasScript: bindings.has(f.code),
-        scriptPath: FLOW_BINDINGS.find(
-          (b) => b.feature_module === mod && b.feature_code === f.code,
-        )?.path || null,
+        status: statusByCode.get(`${f.module}|${f.code}`) ?? '待执行',
+        manual: f.manual === true,
+        hasScript: Boolean(f.flow),
+        scriptPath: f.flow || null,
+        scriptExists: f.flow
+          ? fs.existsSync(path.join(appRoot, f.flow))
+          : false,
       })),
-      scripts: [...scripts.keys()],
-      subflows,
     };
   }
   console.log(JSON.stringify(output, null, 2));
 } else {
-  // 人类可读输出
   for (const [mod, features] of Object.entries(modules)) {
-    const bindings = moduleBindings[mod] || new Set();
-    const scripts = moduleScripts[mod] || new Map();
-
     console.log(`\n📦 ${mod} 模块`);
     console.log(`   功能点: ${features.length} 条`);
-    console.log(`   已绑定: ${bindings.size} 条`);
-    console.log(`   脚本数: ${scripts.size} 个\n`);
+    console.log(
+      `   有脚本: ${features.filter((f) => f.flow).length} 条（manual ${features.filter((f) => f.manual).length}）\n`,
+    );
 
-    // 按章节分组
     const byChapter = {};
     for (const f of features) {
       if (!byChapter[f.chapter]) byChapter[f.chapter] = [];
       byChapter[f.chapter].push(f);
     }
 
-    for (const [ch, items] of Object.entries(byChapter).sort((a, b) => a[0] - b[0])) {
+    for (const [ch, items] of Object.entries(byChapter).sort(
+      (a, b) => a[0] - b[0],
+    )) {
       console.log(`  第 ${ch} 章:`);
       for (const f of items) {
-        const hasBinding = bindings.has(f.code);
+        const status = statusByCode.get(`${f.module}|${f.code}`) ?? '待执行';
         const statusIcon =
-          f.status === '通过' ? '✅' :
-          f.status === '留手测' ? '🤚' :
-          f.status === '假绿' ? '⚠️' :
-          f.status === '待写' ? '📝' :
-          f.status === '待执行' ? '⬜' :
-          f.status === '运行中' ? '🔄' :
-          f.status === '失败' ? '❌' :
+          status === '通过' ? '✅' :
+          status === '留手测' ? '🤚' :
+          status === '假绿' ? '⚠️' :
+          status === '待写' ? '📝' :
+          status === '待执行' ? '⬜' :
+          status === '运行中' ? '🔄' :
+          status === '失败' ? '❌' :
           '❓';
-        const scriptIcon = hasBinding ? '📜' : '  ';
+        const scriptIcon = f.manual ? '🤚' : f.flow ? '📜' : '  ';
         console.log(`    ${statusIcon} ${scriptIcon} ${f.code} ${f.title}`);
       }
     }
-
-    // 未绑定的功能点
-    const unbound = features.filter((f) => !bindings.has(f.code));
-    if (unbound.length > 0) {
-      console.log(`\n  ⚠️  未绑定脚本 (${unbound.length}):`);
-      for (const f of unbound) {
-        console.log(`     ${f.code} ${f.title}`);
-      }
-    }
-
-    // 多出的脚本（有绑定但没 seed）
-    const seedCodes = new Set(features.map((f) => f.code));
-    const extraBindings = [...bindings].filter((code) => !seedCodes.has(code));
-    if (extraBindings.length > 0) {
-      console.log(`\n  ⚠️  有绑定但无 seed (${extraBindings.length}):`);
-      for (const code of extraBindings) {
-        console.log(`     ${code}`);
-      }
-    }
-  }
-
-  console.log(`\n📁 子流程 (${subflows.length}):`);
-  for (const s of subflows) {
-    console.log(`   ${s}`);
   }
   console.log();
 }

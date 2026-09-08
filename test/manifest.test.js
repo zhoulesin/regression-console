@@ -80,18 +80,18 @@ describe('normalizeManifest', () => {
     assert.equal(m.features[0].flow, '');
   });
 
-  it('requires flow when manual is not set', () => {
-    assert.throws(
-      () => normalizeManifest(
-        {
-          version: 1,
-          modules: [{ id: 'todo', title: 'Todo' }],
-          features: [{ module: 'todo', code: '2.1', chapter: 2, title: 't', criteria: 'c' }],
-        },
-        { appRoot },
-      ),
-      (e) => e.code === 'MANIFEST_INVALID',
+  it('accepts a feature without flow when script is not written yet', () => {
+    // 无 flow = 脚本待写（区别于 manual：手测项）。sync 会置 runnable=0
+    const m = normalizeManifest(
+      {
+        version: 1,
+        modules: [{ id: 'todo', title: 'Todo' }],
+        features: [{ module: 'todo', code: '2.9', chapter: 2, title: '待写', criteria: 'c' }],
+      },
+      { appRoot },
     );
+    assert.equal(m.features[0].flow, '');
+    assert.equal(m.features[0].manual, false);
   });
 
   it('rejects wrong version', () => {
