@@ -254,7 +254,7 @@ git commit -m "feat(store): snapshot flags hidden and runnable"
   `maestro test -e APP_ID=<appId> -e DEVICE=<device>` 注入，yaml 内写 `${APP_ID}`。
   脚本因此不再硬编码包名，换项目只改 manifest，不改脚本。
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```javascript
 import { describe, it } from 'node:test';
@@ -325,21 +325,21 @@ it('accepts a manual feature without flow', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test test/manifest.test.js`
 
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 3: Implement `src/errors.js` + `src/manifest.js` as specified**
+- [x] **Step 3: Implement `src/errors.js` + `src/manifest.js` as specified**
 
-- [ ] **Step 4: Run test**
+- [x] **Step 4: Run test**
 
 Run: `node --test test/manifest.test.js`
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/errors.js src/manifest.js test/manifest.test.js
