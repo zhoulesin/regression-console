@@ -219,7 +219,7 @@ describe('runner HTTP routes', () => {
     });
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
       analyzeFn: async () => {
         throw new Error('unused');
@@ -276,7 +276,7 @@ describe('runner HTTP routes', () => {
 
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
       analyzeFn: async () => {
         throw new Error('unused');

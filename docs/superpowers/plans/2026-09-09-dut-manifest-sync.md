@@ -503,7 +503,7 @@ git commit -m "feat: sync feature snapshot from DUT manifest"
   （人工项与「yaml 文件缺失」必须可区分，前端据此显示不同文案：
   人工项提示「需手动验证」，缺失文件提示「yaml 未找到」）
 
-- [ ] **Step 1: Failing HTTP tests**
+- [x] **Step 1: Failing HTTP tests**
 
 ```javascript
 it('GET /features without module is 400 FEATURE_MODULE_REQUIRED', async () => {
@@ -547,13 +547,13 @@ it('POST /sync without appRoot is NO_APP_ROOT', async () => {
 });
 ```
 
-- [ ] **Step 2: Run FAIL** — `node --test test/http.test.js`
+- [x] **Step 2: Run FAIL** — `node --test test/http.test.js`
 
-- [ ] **Step 3: Implement routes；更新 `tmpEnv` 与其它 http 测试，凡 `GET /features` 改为带 `?module=todo`**
+- [x] **Step 3: Implement routes；更新 `tmpEnv` 与其它 http 测试，凡 `GET /features` 改为带 `?module=todo`**
 
-- [ ] **Step 4: PASS `node --test test/http.test.js test/exporter.test.js`**
+- [x] **Step 4: PASS `node --test test/http.test.js test/exporter.test.js`**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/http.js test/http.test.js test/exporter.test.js

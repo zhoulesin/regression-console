@@ -15,6 +15,8 @@ function tmpEnv() {
   fs.mkdirSync(path.join(repoRoot, 'maestro'), { recursive: true });
   const db = openDb(path.join(dir, 't.db'));
   const store = createStore(db);
+  // 模块目录只来自清单：没有 upsert 就不该出现在 /api/modules
+  store.upsertModule({ id: 'todo', title: 'Todo' });
   store.upsertFeature({
     code: '2.1',
     chapter: 2,
@@ -78,7 +80,7 @@ describe('http API', () => {
   it('rejects missing token with 401', async () => {
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
     });
     serverHandle = await listen(app);
@@ -88,6 +90,7 @@ describe('http API', () => {
   });
 
   it('lists modules and filters features by module', async () => {
+    env.store.upsertModule({ id: 'routine', title: 'Routine' });
     env.store.upsertFeature({
       module: 'routine',
       code: '0.1',
@@ -99,7 +102,7 @@ describe('http API', () => {
     });
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
     });
     serverHandle = await listen(app);
@@ -122,10 +125,10 @@ describe('http API', () => {
     assert.equal(routine.json.features[0].code, '0.1');
   });
 
-  it('creates a module via POST /api/modules', async () => {
+  it('POST /api/modules is 410', async () => {
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
     });
     serverHandle = await listen(app);
@@ -133,32 +136,38 @@ describe('http API', () => {
       token,
       body: { id: 'shopping', title: '购物清单' },
     });
-    assert.equal(res.status, 200);
-    assert.equal(res.json.module.module, 'shopping');
-
-    const mods = await req(serverHandle.base, 'GET', '/api/modules', { token });
-    assert.ok(mods.json.modules.some((m) => m.id === 'shopping'));
+    assert.equal(res.status, 410);
+    assert.equal(res.json.code, 'GONE');
   });
 
-  it('rejects invalid module id', async () => {
+  it('POST /api/features and PATCH /api/features/:code are 410', async () => {
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
     });
     serverHandle = await listen(app);
-    const res = await req(serverHandle.base, 'POST', '/api/modules', {
+    const created = await req(serverHandle.base, 'POST', '/api/features', {
       token,
-      body: { id: 'UPPER', title: 'bad' },
+      body: { code: '3.1', chapter: 3, title: 't', criteria: 'c' },
     });
-    assert.equal(res.status, 400);
+    assert.equal(created.status, 410);
+    assert.equal(created.json.code, 'GONE');
+    const patched = await req(
+      serverHandle.base,
+      'PATCH',
+      '/api/features/2.1?module=todo',
+      { token, body: { title: 'x' } },
+    );
+    assert.equal(patched.status, 410);
+    assert.equal(patched.json.code, 'GONE');
   });
 
-  it('exports snapshot via POST /api/export', async () => {
+  it('POST /api/export is 410', async () => {
     let exported = false;
     const app = createApp({
       store: env.store,
-      repoRoot: env.repoRoot,
+      appRoot: env.repoRoot,
       token,
       exportFn: () => {
         exported = true;
@@ -169,7 +178,55 @@ describe('http API', () => {
       token,
       body: {},
     });
-    assert.equal(res.status, 200);
-    assert.equal(exported, true);
+    assert.equal(res.status, 410);
+    assert.equal(res.json.code, 'GONE');
+    assert.equal(exported, false);
+  });
+
+  it('GET /features without module is 400 FEATURE_MODULE_REQUIRED', async () => {
+    const app = createApp({ store: env.store, appRoot: env.repoRoot, token });
+    serverHandle = await listen(app);
+    const { status, json } = await req(
+      serverHandle.base,
+      'GET',
+      '/api/features',
+      { token },
+    );
+    assert.equal(status, 400);
+    assert.equal(json.code, 'FEATURE_MODULE_REQUIRED');
+  });
+
+  it('POST /sync loads fixture manifest', async () => {
+    const appRoot = path.resolve(import.meta.dirname, 'fixtures/app');
+    const app = createApp({
+      store: env.store,
+      appRoot,
+      token,
+      manifestPath: 'regression.manifest.json',
+    });
+    serverHandle = await listen(app);
+    const syncRes = await req(serverHandle.base, 'POST', '/api/sync', {
+      token,
+    });
+    assert.equal(syncRes.status, 200);
+    const { status, json } = await req(
+      serverHandle.base,
+      'GET',
+      '/api/features?module=todo',
+      { token },
+    );
+    assert.equal(status, 200);
+    assert.equal(json.features.find((f) => f.code === '2.1').runnable, true);
+    assert.equal(json.features.find((f) => f.code === '2.2').runnable, false);
+  });
+
+  it('POST /sync without appRoot is NO_APP_ROOT', async () => {
+    const app = createApp({ store: env.store, appRoot: null, token });
+    serverHandle = await listen(app);
+    const { status, json } = await req(serverHandle.base, 'POST', '/api/sync', {
+      token,
+    });
+    assert.equal(status, 400);
+    assert.equal(json.code, 'NO_APP_ROOT');
   });
 });

@@ -8,7 +8,13 @@ import { createStore } from './store.js';
 import { importIfEmpty, syncFlowBindings } from './importer.js';
 import { newToken } from './auth.js';
 import { PORT, HOST, DEFAULT_MODULES } from './constants.js';
-import { appRoot, regressionRoot, dbFile } from './paths.js';
+import {
+  appRoot,
+  regressionRoot,
+  dbFile,
+  manifestPath,
+} from './paths.js';
+import { resolveManifestPath } from './config.js';
 import { createRunner, resolveMaestroBin } from './runner.js';
 import { exportSnapshot } from './exporter.js';
 
@@ -38,11 +44,10 @@ const runner = createRunner({
 });
 const app = createApp({
   store,
-  repoRoot: appRoot,
-  flowRoot: regressionRoot,
+  appRoot,
+  manifestPath,
   token,
   runner,
-  exportFn,
 });
 const server = http.createServer(app);
 server.on('error', (e) => {

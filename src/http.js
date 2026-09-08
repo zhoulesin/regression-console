@@ -2,24 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import { tokenMiddleware } from './auth.js';
-import {
-  CATALOG_FEATURE_CODE,
-  CHAPTER_TITLES,
-  DEFAULT_MODULE,
-  DEFAULT_MODULES,
-  MODULES,
-  STATUS,
-} from './constants.js';
-import { normalizeCatalogDraft } from './catalog.js';
-import { assertMaestroYamlPath, diffFiles, applyFiles } from './fileGate.js';
-import { exportSnapshot } from './exporter.js';
-import { describeFiles } from './flowSteps.js';
+import { DEFAULT_MODULE } from './constants.js';
+import { AppError, syncFromManifest } from './sync.js';
 
 /**
  * @param {unknown} err
  * @returns {number}
  */
 function statusFromError(err) {
+  if (err instanceof AppError) return err.httpStatus;
   const msg = String(err?.message ?? err ?? '');
   for (const code of [401, 400, 404, 409, 422]) {
     if (msg.includes(String(code))) return code;
@@ -33,7 +24,12 @@ function statusFromError(err) {
  */
 function sendError(err, res) {
   const status = statusFromError(err);
-  res.status(status).json({ error: String(err?.message ?? err ?? 'error') });
+  const payload = { error: String(err?.message ?? err ?? 'error') };
+  // 前端要区分 FEATURE_MANUAL / FLOW_MISSING / RUN_ACTIVE 等具体原因
+  if (err instanceof AppError || typeof err?.code === 'string') {
+    payload.code = err.code;
+  }
+  res.status(status).json(payload);
 }
 
 /**
@@ -51,50 +47,27 @@ function moduleOf(req) {
 /**
  * @param {{
  *   store: ReturnType<import('./store.js').createStore>,
- *   repoRoot: string,
- *   flowRoot?: string,
+ *   appRoot: string | null,
+ *   manifestPath?: string,
  *   token: string,
  *   runner?: ReturnType<import('./runner.js').createRunner>,
- *   exportFn?: () => void,
  * }} opts
  * @returns {import('express').Application}
  */
-export function createApp({
-  store,
-  repoRoot,
-  flowRoot,
-  token,
-  runner,
-  exportFn,
-}) {
-  // 测试与旧调用默认沿用 repoRoot；生产环境显式把 flowRoot 指向控制台根。
-  const flowBase = flowRoot ?? repoRoot;
+export function createApp({ store, appRoot, manifestPath, token, runner }) {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
-
-  const doExport =
-    exportFn ??
-    (() => {
-      exportSnapshot({ store, repoRoot });
-    });
 
   const api = express.Router();
   api.use(tokenMiddleware(token));
 
   api.get('/modules', (_req, res) => {
     try {
-      let modules = store.listModules();
-      // 如果数据库中没有模块，返回硬编码的默认模块
-      if (modules.length === 0) {
-        modules = DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          title: m.title,
-        }));
-      }
-      const result = modules.map((m) => ({
+      // 模块目录只来自清单同步，不再有内置 fallback
+      const result = store.listModules().map((m) => ({
         id: m.module,
         title: m.title,
-        source: DEFAULT_MODULES.some((d) => d.id === m.module) ? 'builtin' : 'custom',
+        source: 'manifest',
       }));
       res.json({ modules: result, defaultModule: DEFAULT_MODULE });
     } catch (err) {
@@ -102,38 +75,29 @@ export function createApp({
     }
   });
 
-  api.post('/modules', (req, res) => {
-    try {
-      const { id, title } = req.body ?? {};
-
-      if (!id || typeof id !== 'string') {
-        throw new Error('400: 模块 ID 必填');
-      }
-      if (!/^[a-z0-9-]{2,20}$/.test(id)) {
-        throw new Error('400: 模块 ID 只能是小写字母/数字/连字符，长度 2-20');
-      }
-      if (!title || typeof title !== 'string' || title.trim().length === 0) {
-        throw new Error('400: 模块标题必填');
-      }
-      if (title.length > 50) {
-        throw new Error('400: 模块标题最多 50 字');
-      }
-
-      const mod = store.createModule({ id, title: title.trim() });
-      res.json({ module: mod });
-    } catch (err) {
-      sendError(err, res);
-    }
+  // 清单才是真源：目录类写接口全部冻结成 410
+  api.post('/modules', (_req, res) => {
+    res.status(410).json({ error: '410: gone', code: 'GONE' });
   });
 
   api.get('/features', (req, res) => {
     try {
       const module =
         typeof req.query.module === 'string' ? req.query.module : '';
-      const features = store.listFeatures(module || undefined).map((f) => {
+      if (!module) {
+        throw new AppError(
+          400,
+          'FEATURE_MODULE_REQUIRED',
+          'module 查询参数必填',
+        );
+      }
+      const features = store.listFeatures(module).map((f) => {
         const latestRun = store.getLatestRun(f.code, f.module) ?? null;
         return {
           ...f,
+          runnable: Boolean(f.runnable),
+          manual: Boolean(f.manual),
+          hidden: undefined,
           pendingSession: store.getPendingSession(f.code, f.module) ?? null,
           latestDiagnosis: store.getLatestDiagnosis(f.code, f.module) ?? null,
           diagnosisHistory:
@@ -144,15 +108,12 @@ export function createApp({
           attempts: store.listAttempts(f.code, f.module),
         };
       });
-      const meta = store.getModuleMeta(module || DEFAULT_MODULE);
+      const meta = store.getModuleMeta(module);
       res.json({
         features,
-        module: module || null,
+        module,
         moduleNotes: meta.notes,
-        chapterTitles: {
-          ...(CHAPTER_TITLES[module || DEFAULT_MODULE] ?? {}),
-          ...meta.chapters,
-        },
+        chapterTitles: meta.chapters,
       });
     } catch (err) {
       sendError(err, res);
@@ -175,72 +136,30 @@ export function createApp({
     }
   });
 
-  api.post('/features', (req, res) => {
-    try {
-      const module = moduleOf(req);
-      const { code, chapter, title, criteria, precondition, status } =
-        req.body ?? {};
-      if (
-        typeof code !== 'string' ||
-        typeof chapter !== 'number' ||
-        typeof title !== 'string' ||
-        typeof criteria !== 'string'
-      ) {
-        throw new Error('400: code/chapter/title/criteria required');
-      }
-      store.upsertFeature({
-        module,
-        code,
-        chapter,
-        title,
-        criteria,
-        precondition: typeof precondition === 'string' ? precondition : '',
-        status: typeof status === 'string' ? status : STATUS.PENDING_WRITE,
-      });
-      res.json({ feature: store.getFeature(code, module) });
-    } catch (err) {
-      sendError(err, res);
-    }
+  api.post('/features', (_req, res) => {
+    res.status(410).json({ error: '410: gone', code: 'GONE' });
   });
 
-  api.patch('/features/:code', (req, res) => {
+  api.patch('/features/:code', (_req, res) => {
+    res.status(410).json({ error: '410: gone', code: 'GONE' });
+  });
+
+  // 清单同步：DUT -> 控制台的唯一入口
+  api.post('/sync', (_req, res) => {
     try {
-      const module = moduleOf(req);
-      const existing = store.getFeature(req.params.code, module);
-      if (!existing) {
-        throw new Error('400: feature not found');
+      // 清单变更会让正在执行的 flow 路径失效，活跃 run 期间拒绝
+      if (store.getActiveRun()) {
+        throw new AppError(409, 'RUN_ACTIVE', 'a run is active');
       }
-      const body = req.body ?? {};
-      const next = {
-        module: existing.module,
-        code: existing.code,
-        chapter: existing.chapter,
-        title: typeof body.title === 'string' ? body.title : existing.title,
-        criteria:
-          typeof body.criteria === 'string' ? body.criteria : existing.criteria,
-        precondition:
-          typeof body.precondition === 'string'
-            ? body.precondition
-            : existing.precondition,
-        notes: typeof body.notes === 'string' ? body.notes : existing.notes,
-        status: typeof body.status === 'string' ? body.status : existing.status,
-      };
-      store.upsertFeature(next);
-      res.json({
-        feature: store.getFeature(existing.code, existing.module),
-      });
+      const result = syncFromManifest({ store, appRoot, manifestPath });
+      res.json({ ok: true, ...result });
     } catch (err) {
       sendError(err, res);
     }
   });
 
   api.post('/export', (_req, res) => {
-    try {
-      doExport();
-      res.json({ ok: true });
-    } catch (err) {
-      sendError(err, res);
-    }
+    res.status(410).json({ error: '410: gone', code: 'GONE' });
   });
 
   if (runner) {

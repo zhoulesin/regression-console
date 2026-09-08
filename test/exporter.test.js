@@ -109,16 +109,13 @@ describe('exportSnapshot', () => {
 });
 
 describe('export wiring', () => {
-  it('POST /api/export writes under tmp repoRoot', async () => {
+  it('POST /api/export is gone (410)', async () => {
     const { repoRoot, store } = tmpRepo();
     const token = newToken();
     const app = createApp({
       store,
-      repoRoot,
+      appRoot: repoRoot,
       token,
-      analyzeFn: async () => {
-        throw new Error('unused');
-      },
     });
     const server = await new Promise((resolve) => {
       const s = app.listen(0, '127.0.0.1', () => resolve(s));
@@ -129,13 +126,14 @@ describe('export wiring', () => {
         method: 'POST',
         headers: { authorization: `Bearer ${token}` },
       });
-      assert.equal(res.status, 200);
-      const md = fs.readFileSync(
-        path.join(repoRoot, 'TESTING_DEVICE_REGRESSION.md'),
-        'utf8',
+      assert.equal(res.status, 410);
+      const body = await res.json();
+      assert.equal(body.code, 'GONE');
+      // 目录已归 DUT，控制台不再写盘
+      assert.equal(
+        fs.existsSync(path.join(repoRoot, 'TESTING_DEVICE_REGRESSION.md')),
+        false,
       );
-      assert.match(md, /1\.5/);
-      assert.match(md, /通过/);
     } finally {
       await new Promise((r, j) => server.close((e) => (e ? j(e) : r())));
     }
