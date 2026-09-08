@@ -694,7 +694,7 @@ git commit -m "feat(ui): sync button and read-only catalog from DUT"
 **绝不允许在 DUT 侧没有完整副本的情况下删除唯一资产** —— 那会永久丢失 24 个功能点的定义。
 删除前建议先 `git tag pre-manifest-migration` 留一个可回退点。
 
-- [ ] **Step 1: 写并运行导出脚本，复制 maestro**
+- [x] **Step 1: 写并运行导出脚本，复制 maestro**
 
 - [ ] **Step 2: 删除本仓 seed/importer/产品 maestro；修所有破掉的 import**
 
@@ -726,7 +726,7 @@ Expected: PASS
 5. 无 appRoot 时 `POST /sync` 为 `NO_APP_ROOT`，不会 spawn 本仓路径  
 6. DUT 侧 manifest 与 `maestro/**` 均已落盘且逐条校验存在（Task 8 的前置条件）  
 
-- [ ] **Step 3: 若有缺口，补测试后 commit `test: cover DUT sync acceptance`**
+- [x] **Step 3: 若有缺口，补测试后 commit `test: cover DUT sync acceptance`**
 
 ---
 
