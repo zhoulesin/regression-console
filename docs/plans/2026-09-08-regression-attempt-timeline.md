@@ -1,5 +1,8 @@
 # Regression Attempt Timeline Implementation Plan
 
+> **状态校准（2026-09-08）：** 代码已全部落地，勾选状态按实际情况补记。
+> 唯「Task 5 Step 3 Browser acceptance」属浏览器人工路径，未做，保持未勾选。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将回归控制台固定步骤页改为可持久化的轮次时间线，步骤可点开详情，页面底部始终显示当前进度和主操作。
@@ -35,7 +38,7 @@
 - Produces: `setAttemptStatus(attemptId, status, ended?)`
 - Changes: `startRun(code, module, attemptId)` and `createAiSession({... attempt_id })`
 
-- [ ] **Step 1: Write failing Store tests**
+- [x] **Step 1: Write failing Store tests**
 
   Cover these real behaviors with an in-memory SQLite database:
 
@@ -57,17 +60,17 @@
   });
   ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
   Run: `npm test -- test/attemptStore.test.js`
 
   Expected: failure because `workflow_attempt` and Store methods do not exist.
 
-- [ ] **Step 3: Add schema and migration**
+- [x] **Step 3: Add schema and migration**
 
   Add `workflow_attempt` with unique `(feature_module, feature_code, sequence)`, then add nullable `attempt_id` to `run` and `ai_session`. Migration must use `PRAGMA table_info` guards so old databases open repeatedly without error.
 
-- [ ] **Step 4: Implement Store APIs**
+- [x] **Step 4: Implement Store APIs**
 
   Use a transaction when assigning the next `sequence`. `getAttemptDetail` returns:
 
@@ -82,7 +85,7 @@
 
   `listAttempts` returns lightweight rows ordered by sequence ascending, capped to the newest 20.
 
-- [ ] **Step 5: Run focused and existing Store tests**
+- [x] **Step 5: Run focused and existing Store tests**
 
   Run: `npm test -- test/attemptStore.test.js test/diagnoseLoop.test.js`
 
@@ -102,7 +105,7 @@
 - Produces: feature payload field `attempts`
 - Produces: `GET /api/attempts/:id`
 
-- [ ] **Step 1: Write failing HTTP tests**
+- [x] **Step 1: Write failing HTTP tests**
 
   Add tests proving:
 
@@ -122,25 +125,25 @@
   assert.equal(detail.diagnoses[0].attempt_id, attemptId);
   ```
 
-- [ ] **Step 2: Run HTTP tests and verify RED**
+- [x] **Step 2: Run HTTP tests and verify RED**
 
   Run: `npm test -- test/http.test.js`
 
   Expected: assertions fail because responses lack attempts and links.
 
-- [ ] **Step 3: Bind analyze/apply/reject**
+- [x] **Step 3: Bind analyze/apply/reject**
 
   At analyze start, reuse only an unfinished attempt that has not acquired an analyze session; otherwise create a new attempt. Link the created session and return `{ attempt, session, ...existingPayload }`. Apply changes status to `open`; reject changes status to `rejected` and writes `ended_at`.
 
-- [ ] **Step 4: Bind run/finish/diagnose**
+- [x] **Step 4: Bind run/finish/diagnose**
 
   `startRun` uses the latest approved open attempt. Finish updates attempt to `passed` with `ended_at`, or `failed` without ending it. Diagnose links its `ai_session` to the failed run's attempt.
 
-- [ ] **Step 5: Add summary/detail reads**
+- [x] **Step 5: Add summary/detail reads**
 
   `/api/features?module=` returns up to 20 summaries for each feature. `GET /api/attempts/:id` rejects attempts outside the requested module with 404 and returns full detail for valid rows.
 
-- [ ] **Step 6: Run backend suite**
+- [x] **Step 6: Run backend suite**
 
   Run: `npm test`
 
@@ -158,17 +161,17 @@
 - Produces: `buildAttemptSteps(attempt)`
 - Produces: `resolveCurrentStep(attempt)`
 
-- [ ] **Step 1: Write failing pure-function tests**
+- [x] **Step 1: Write failing pure-function tests**
 
   Cover empty, analyzing, pending review, running, failed without diagnosis, failed with diagnosis, passed, and rejected attempts. Assert only occurred nodes are returned and reruns collapse into one execution node with `runCount`.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
   Run: `npm test -- test/attemptViewModel.test.js`
 
   Expected: module-not-found or missing export failure.
 
-- [ ] **Step 3: Implement minimal derivation**
+- [x] **Step 3: Implement minimal derivation**
 
   Return nodes with stable shape:
 
@@ -183,7 +186,7 @@
 
   Follow the exact current-node precedence in the approved design.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
   Run: `npm test -- test/attemptViewModel.test.js`
 
@@ -206,11 +209,11 @@
 - `StepModal({ open, attempt, stepId, onClose })`
 - `CurrentDetail({ selected, attempt, stepId, actions, taskState })`
 
-- [ ] **Step 1: Extract shared display components**
+- [x] **Step 1: Extract shared display components**
 
   Export or move `TaskPanel`, `StepList`, and `DiagnosisConversation` so `CurrentDetail` and `StepModal` reuse the same rendering instead of duplicating diagnosis and step formatting.
 
-- [ ] **Step 2: Build timeline**
+- [x] **Step 2: Build timeline**
 
   Render the exact information hierarchy:
 
@@ -222,19 +225,19 @@
 
   Completed historical rounds are compact; current round is emphasized. Every rendered node is a keyboard-accessible button.
 
-- [ ] **Step 3: Build read-only modal**
+- [x] **Step 3: Build read-only modal**
 
   Use `role="dialog"`, `aria-modal="true"`, close button, Escape handler, and backdrop close. Fetch `/api/attempts/:id` only on first open and cache by ID in `App`.
 
-- [ ] **Step 4: Replace fixed six sections**
+- [x] **Step 4: Replace fixed six sections**
 
   Keep the existing feature heading and explanation. Remove the numbered fixed sections and session-history table. Route existing callbacks (`onAnalyze`, `onApply`, `onReject`, `onRun`, `onAbort`, `onDiagnose`) into `CurrentDetail`.
 
-- [ ] **Step 5: Style centered document flow**
+- [x] **Step 5: Style centered document flow**
 
   Reuse `--app-max`. Add timeline connectors, active pulse, terminal state colors, responsive node wrapping, modal, and bottom current-detail card. Do not use sticky/fixed positioning for current detail.
 
-- [ ] **Step 6: Build frontend**
+- [x] **Step 6: Build frontend**
 
   Run: `npm run build-ui`
 
@@ -247,13 +250,13 @@
 **Files:**
 - Modify only if failures expose defects in files from Tasks 1–4.
 
-- [ ] **Step 1: Run complete Node suite**
+- [x] **Step 1: Run complete Node suite**
 
   Run: `npm test`
 
   Expected: all tests PASS.
 
-- [ ] **Step 2: Run frontend production build**
+- [x] **Step 2: Run frontend production build**
 
   Run: `npm run build-ui`
 
@@ -263,6 +266,6 @@
 
   Start the console and verify one feature through: empty timeline → generate → review → approve → failed run → diagnose → generate next attempt. Click a historical step and confirm the modal changes while the bottom detail remains bound to the latest current node. Refresh and confirm attempts persist.
 
-- [ ] **Step 4: Report scope and manual device path**
+- [x] **Step 4: Report scope and manual device path**
 
   List changed files, expected behavior changes, known migration risk, and the exact device/browser verification path. Do not claim Gradle verification.

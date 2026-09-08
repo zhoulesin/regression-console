@@ -1,5 +1,8 @@
 # 真机回归控制台 Implementation Plan
 
+> **状态校准（2026-09-08）：** 代码已全部落地，勾选状态按实际情况补记。
+> 唯「Task 10 Step 3 本机验收」需 USB 真机，未做，保持未勾选。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在本仓库 `tools/regression-console/` 落地本机 Web 工作台：看板管理功能点、Claude 起草 Maestro YAML、人审 Diff 后写盘、再手动执行真机并自动记进度。
@@ -84,7 +87,7 @@ tools/regression-console/
   - `openDb(dbPath: string): Database`
   - `createStore(db): Store` 方法见步骤 3
 
-- [ ] **Step 1: 追加 gitignore**
+- [x] **Step 1: 追加 gitignore**
 
 在 `.gitignore` 末尾追加：
 
@@ -94,7 +97,7 @@ tools/regression-console/**/node_modules/
 tools/regression-console/web/dist/
 ```
 
-- [ ] **Step 2: 写失败的状态机测试**
+- [x] **Step 2: 写失败的状态机测试**
 
 `tools/regression-console/test/store.test.js`：
 
@@ -152,7 +155,7 @@ describe('store status machine', () => {
 });
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 ```bash
 cd tools/regression-console && node --test test/store.test.js
@@ -160,7 +163,7 @@ cd tools/regression-console && node --test test/store.test.js
 
 Expected: FAIL（模块不存在）
 
-- [ ] **Step 4: 最小实现**
+- [x] **Step 4: 最小实现**
 
 `package.json`：
 
@@ -244,7 +247,7 @@ CREATE TABLE IF NOT EXISTS ai_session (
 
 `assertCanRun`：`失败` 允许再跑（规格：失败可再次执行）。`待写` 不允许。
 
-- [ ] **Step 5: 安装依赖并跑测试**
+- [x] **Step 5: 安装依赖并跑测试**
 
 ```bash
 cd tools/regression-console && npm install && node --test test/store.test.js
@@ -252,7 +255,7 @@ cd tools/regression-console && npm install && node --test test/store.test.js
 
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add .gitignore tools/regression-console/package.json tools/regression-console/package-lock.json tools/regression-console/src/constants.js tools/regression-console/src/db.js tools/regression-console/src/store.js tools/regression-console/test/store.test.js
@@ -274,7 +277,7 @@ git commit -m "feat(regression-console): add sqlite store and feature status mac
   - `diffFiles(repoRoot, files: {path, content}[]): string` unified diff 文本
   - `applyFiles(repoRoot, files): { applied: string[] }` 先备份已存在文件为 `path + '.bak'` 再写 utf8
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 import { describe, it } from 'node:test';
@@ -314,7 +317,7 @@ describe('fileGate', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 ```bash
 cd tools/regression-console && node --test test/fileGate.test.js
@@ -322,7 +325,7 @@ cd tools/regression-console && node --test test/fileGate.test.js
 
 Expected: FAIL
 
-- [ ] **Step 3: 实现 `fileGate.js`**
+- [x] **Step 3: 实现 `fileGate.js`**
 
 规则（全部失败抛 `Error`，`message` 含 `400`）：
 
@@ -333,7 +336,7 @@ Expected: FAIL
 5. `diffFiles`：对每个 file 读旧内容（缺文件当空），用逐行 `--- a/path` / `+++ b/path` 简单实现即可（不必依赖 `diff` 包）：旧有新无的行前缀 `-`，反之为 `+`。至少覆盖「整文件替换」可读。
 6. `applyFiles`：先对每个 path `assertMaestroYamlPath`；全部通过后再写；`mkdirSync(...,{recursive:true})`。
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 ```bash
 cd tools/regression-console && node --test test/fileGate.test.js
@@ -341,7 +344,7 @@ cd tools/regression-console && node --test test/fileGate.test.js
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/fileGate.js tools/regression-console/test/fileGate.test.js
@@ -363,7 +366,7 @@ git commit -m "feat(regression-console): restrict writes to maestro yaml via Fil
 
 `SeedRow = { code, chapter, title, criteria, precondition, status }`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 import { describe, it } from 'node:test';
@@ -396,7 +399,7 @@ describe('importer', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测确认失败**
+- [x] **Step 2: 跑测确认失败**
 
 ```bash
 cd tools/regression-console && node --test test/importer.test.js
@@ -404,7 +407,7 @@ cd tools/regression-console && node --test test/importer.test.js
 
 Expected: FAIL
 
-- [ ] **Step 3: 实现 seed 与 importer**
+- [x] **Step 3: 实现 seed 与 importer**
 
 `SEED_FEATURES` 必须与 spec / `TESTING_DEVICE_REGRESSION.md` 第三节一致，23 条完整写出（不要「见文档」）：
 
@@ -432,7 +435,7 @@ Expected: FAIL
 
 其余功能点此任务不绑 path。`importIfEmpty` 插完 feature 再插 bindings。
 
-- [ ] **Step 4: 跑测确认通过**
+- [x] **Step 4: 跑测确认通过**
 
 ```bash
 cd tools/regression-console && node --test test/importer.test.js
@@ -440,7 +443,7 @@ cd tools/regression-console && node --test test/importer.test.js
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/seedFeatures.js tools/regression-console/src/importer.js tools/regression-console/test/importer.test.js
@@ -461,7 +464,7 @@ git commit -m "feat(regression-console): seed 23 features and bind existing maes
 - Consumes: `assertMaestroYamlPath(repoRoot, path)`
 - Produces: `parseAnalyzeResponse(raw: string, repoRoot: string): { rationale: string, risks: string[], files: {path, content}[] }`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```js
 import { describe, it } from 'node:test';
@@ -494,7 +497,7 @@ describe('parseAnalyzeResponse', () => {
 });
 ```
 
-- [ ] **Step 2: 跑测确认失败**
+- [x] **Step 2: 跑测确认失败**
 
 ```bash
 cd tools/regression-console && node --test test/parseAnalyze.test.js
@@ -502,7 +505,7 @@ cd tools/regression-console && node --test test/parseAnalyze.test.js
 
 Expected: FAIL
 
-- [ ] **Step 3: 实现解析**
+- [x] **Step 3: 实现解析**
 
 1. trim；若含 ` ```json ` 则取第一对 fence 内文本，否则整段当 JSON。
 2. `JSON.parse` 失败 → throw 含 `422`。
@@ -510,7 +513,7 @@ Expected: FAIL
 4. 对每个 path 调 `assertMaestroYamlPath`；失败则改抛 422（不要把 400 漏到 HTTP 层当路径闸门误报——在 parseAnalyze 里 catch 后 `throw new Error('422: ...')`）。
 5. 禁止 `content` 看起来像 unified diff（若 `content.startsWith('@@')` 或 `content.startsWith('--- ')` → 422）。
 
-- [ ] **Step 4: 跑测确认通过**
+- [x] **Step 4: 跑测确认通过**
 
 ```bash
 cd tools/regression-console && node --test test/parseAnalyze.test.js
@@ -518,7 +521,7 @@ cd tools/regression-console && node --test test/parseAnalyze.test.js
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/parseAnalyze.js tools/regression-console/test/parseAnalyze.test.js
@@ -540,7 +543,7 @@ git commit -m "feat(regression-console): parse Claude analyze JSON behind FileGa
   - `analyzeWithClaude({ repoRoot, feature, extraPaths?: string[] }): Promise<{ rationale, risks, files, raw }>`
   - `IRON_RULES` 字符串常量（铁律全文写在文件里，见步骤 3）
 
-- [ ] **Step 1: 实现 contextPack（无独立测试，由手工用短文件）**
+- [x] **Step 1: 实现 contextPack（无独立测试，由手工用短文件）**
 
 `CONTEXT_FILES_BY_CHAPTER`：
 
@@ -557,7 +560,7 @@ git commit -m "feat(regression-console): parse Claude analyze JSON behind FileGa
 
 `buildContext`：对每个存在的文件读最多 200 行，拼进 prompt。缺文件跳过。
 
-- [ ] **Step 2: 实现 claudeProvider.js**
+- [x] **Step 2: 实现 claudeProvider.js**
 
 ```js
 import { spawn } from 'node:child_process';
@@ -608,7 +611,7 @@ export function analyzeWithClaude({ repoRoot, feature, bin = 'claude' }) {
 
 不传 `--dangerously-skip-permissions`。
 
-- [ ] **Step 3: 无真 CLI 的冒烟（可选）**
+- [x] **Step 3: 无真 CLI 的冒烟（可选）**
 
 若本机无 claude，不跑。有则：
 
@@ -618,7 +621,7 @@ node -e "import('./src/claudeProvider.js').then(m=>m.analyzeWithClaude({repoRoot
 
 在 `tools/regression-console` 下执行时 `repoRoot` 应为仓库根。此步失败不阻塞 Task 6（HTTP 可用 fixture provider）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tools/regression-console/src/contextPack.js tools/regression-console/src/claudeProvider.js
@@ -640,7 +643,7 @@ git commit -m "feat(regression-console): add Claude analyze provider and chapter
 
 `paths.js`：`export const repoRoot = path.resolve(import.meta.dirname, '../../..')`；`export const dataDir = path.resolve(import.meta.dirname, '../data')`。
 
-- [ ] **Step 1: auth.js**
+- [x] **Step 1: auth.js**
 
 ```js
 import crypto from 'node:crypto';
@@ -658,7 +661,7 @@ export function tokenMiddleware(token) {
 }
 ```
 
-- [ ] **Step 2: createApp 路由**
+- [x] **Step 2: createApp 路由**
 
 `express.json({ limit: '2mb' })`。`/api/*` 全部走 `tokenMiddleware`。
 
@@ -676,7 +679,7 @@ export function tokenMiddleware(token) {
 
 将 `analyzeFn` 注入以便测试可传入 `async () => ({rationale,risks,files,raw,prompt})`。
 
-- [ ] **Step 3: 用 node:test 打 HTTP（内联 supertest 或 http.request）**
+- [x] **Step 3: 用 node:test 打 HTTP（内联 supertest 或 http.request）**
 
 在 `test/http.test.js`：
 
@@ -687,9 +690,9 @@ export function tokenMiddleware(token) {
 
 用 tmp repoRoot（含 `maestro/`），不要写真实仓库。
 
-- [ ] **Step 4: 跑 `node --test test/http.test.js` 至 PASS**
+- [x] **Step 4: 跑 `node --test test/http.test.js` 至 PASS**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/auth.js tools/regression-console/src/http.js tools/regression-console/src/paths.js tools/regression-console/test/http.test.js
@@ -714,7 +717,7 @@ git commit -m "feat(regression-console): add token-gated analyze and apply APIs"
   - `runner.subscribe(runId, fn)` 日志行
   - `findLatestArtifactDir(): string | ''` 读 `os.homedir()+'/.maestro/tests'` 下按 mtime 最新目录
 
-- [ ] **Step 1: 失败测试：第二次 start 抛 409；abort 把 exit 记非 0**
+- [x] **Step 1: 失败测试：第二次 start 抛 409；abort 把 exit 记非 0**
 
 `spawnFn` 假实现：返回 EventEmitter 风格 `{ stdout, stderr, kill, on('close') }`。第一次 close 0；第二次 start 应在 spawn 前抛错。
 
@@ -724,13 +727,13 @@ it('single slot', async () => {
 });
 ```
 
-- [ ] **Step 2: 跑测 FAIL 后实现 runner**
+- [x] **Step 2: 跑测 FAIL 后实现 runner**
 
 `start`：`store.startRun`；`spawn(maestroBin, ['test', flow.path], { cwd: repoRoot })`；拼接 log；`close` 时 `finishRun`，若 exit!==0 填 `artifact_dir: findLatestArtifactDir()`。
 
 `abort`：对当前 child `kill('SIGTERM')`。
 
-- [ ] **Step 3: HTTP**
+- [x] **Step 3: HTTP**
 
 - `POST /api/flows/:id/run` 用 flow id 找到 feature_code 再 `runner.start`
 - `POST /api/runs/abort`
@@ -738,9 +741,9 @@ it('single slot', async () => {
 
 二次 start → 409。
 
-- [ ] **Step 4: `node --test test/runner.test.js` PASS**
+- [x] **Step 4: `node --test test/runner.test.js` PASS**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/runner.js tools/regression-console/src/http.js tools/regression-console/test/runner.test.js
@@ -760,21 +763,21 @@ git commit -m "feat(regression-console): run maestro with single slot and SSE lo
   - `path.join(repoRoot, 'TESTING_DEVICE_REGRESSION.md')`
   - `path.join(repoRoot, 'docs/testing/device-regression-plan.html')`
 
-- [ ] **Step 1: 实现 Markdown 生成**
+- [x] **Step 1: 实现 Markdown 生成**
 
 结构保持现文档的「第三节功能点表」：按 chapter 输出 `| # | 功能点 | 判定依据 | 状态 |`。状态用 SQLite 当前值。第四节执行流表用 `listFlows` 聚合。不要删文档里的铁律章节：把 `docs/testing/regression-console-design.html` 不碰；**回归 md 的第一～二节、五～十节**若已存在，读取原文件，只替换「## 三、功能点清单」到下一个 `---` 或「## 四、」之间的块；若文件没有该锚点，则整文件写成「短版」（一、怎么读 + 三、清单 + 四、flow 表）。优先锚点替换，避免冲掉铁律。
 
-- [ ] **Step 2: HTML 进度页**
+- [x] **Step 2: HTML 进度页**
 
 以 `docs/testing/device-regression-plan.html` 为模板骨架：统计卡数字用 `store.listFeatures()` 计算通过数/总数；各章进度条 width = 通过/该章条数；表格行按 feature 渲染。CSS 原样复制进 exporter 字符串或读现文件替换 `<div class="cards">` 之后到 footer 前。实现上：读现 html，若含 `id="generated-body"` 则只换该节点；**第一次**给现 html 加上 `<div id="generated-body">` 包住可变部分。本任务允许一次性 Modify `docs/testing/device-regression-plan.html` 插入该 id，之后只由 exporter 填 inner。
 
 注意：仓库 `.gitignore` 含 `/docs`，html 可能不被 git 跟踪；仍按 spec 路径写。
 
-- [ ] **Step 3: `/api/export` 调 `exportSnapshot`；`finishRun` 成功后同样调用**
+- [x] **Step 3: `/api/export` 调 `exportSnapshot`；`finishRun` 成功后同样调用**
 
-- [ ] **Step 4: 用 tmp 目录测 exporter 写出含 `1.5` 和 `通过` 的 md（不要测真仓库）**
+- [x] **Step 4: 用 tmp 目录测 exporter 写出含 `1.5` 和 `通过` 的 md（不要测真仓库）**
 
-- [ ] **Step 5: Commit**（含 html 锚点修改若有）
+- [x] **Step 5: Commit**（含 html 锚点修改若有）
 
 ```bash
 git add tools/regression-console/src/exporter.js tools/regression-console/src/http.js tools/regression-console/src/runner.js docs/testing/device-regression-plan.html
@@ -800,7 +803,7 @@ git commit -m "feat(regression-console): export feature board to markdown and ht
 - Consumes: Task 6–7 HTTP
 - Produces: 单页看板
 
-- [ ] **Step 1: Vite 配置**
+- [x] **Step 1: Vite 配置**
 
 `web/package.json`：`react` `react-dom` `vite` `@vitejs/plugin-react`。
 
@@ -822,9 +825,9 @@ export default defineConfig({
 
 token 用 `localStorage` 或 URL `?token=`：`api.js` 每次 fetch 带 `Authorization: Bearer`。页面 load 若 URL 有 token 则存起来。
 
-- [ ] **Step 2: styles.css** 复制进度页变量与 pill、卡片、表格、左 38% 布局。
+- [x] **Step 2: styles.css** 复制进度页变量与 pill、卡片、表格、左 38% 布局。
 
-- [ ] **Step 3: App.jsx**
+- [x] **Step 3: App.jsx**
 
 - 顶栏：通过数、运行中、第一个非通过且非留手测的 code 显示「卡在」
 - 左列：按 chapter 分组；点击选中
@@ -837,9 +840,9 @@ token 用 `localStorage` 或 URL `?token=`：`api.js` 每次 fetch 带 `Authoriz
 - 中止
 - 不要实现聊天布局
 
-- [ ] **Step 4: `cd web && npm install`**，`npx vite build` 必须成功
+- [x] **Step 4: `cd web && npm install`**，`npx vite build` 必须成功
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/web
@@ -858,7 +861,7 @@ git commit -m "feat(regression-console): add dashboard UI for analyze, apply, an
 **Interfaces:**
 - Produces: `node src/server.js` 打印 URL 并 `open`
 
-- [ ] **Step 1: server.js**
+- [x] **Step 1: server.js**
 
 ```js
 import fs from 'node:fs';
@@ -905,7 +908,7 @@ server.listen(PORT, HOST, () => {
 
 `listen` 必须传 `HOST` `'127.0.0.1'`，不要省略（省略会绑 IPv6/所有接口）。
 
-- [ ] **Step 2: package.json**
+- [x] **Step 2: package.json**
 
 ```json
 "scripts": {
@@ -924,7 +927,7 @@ server.listen(PORT, HOST, () => {
 2. `npm start` 浏览器打开看板，应看到 23 条，1.5 为通过  
 3. 有 USB 真机且 Maestro 可用时：选 0.4 或 1.1，点执行，日志出现，结束后状态不崩（已通过的用例再跑应仍可通过或按真实结果更新——**已通过条目允许再次执行**，`assertCanRun` 须同时允许 `通过` 与 `失败` 与 `待执行`，否则验收 1.1 会 409。**修正：** Task 1 的 `assertCanRun` 在本任务改为允许 `STATUS.PASSED | FAILED | PENDING_RUN`，禁止 `PENDING_WRITE | RUNNING | MANUAL | FALSE_GREEN`。补一条 store 测试并提交在本 task。）
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tools/regression-console/src/server.js tools/regression-console/package.json tools/regression-console/README.md tools/regression-console/src/store.js tools/regression-console/test/store.test.js

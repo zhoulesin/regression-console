@@ -1,5 +1,9 @@
 # Regression Execution Chain Implementation Plan
 
+> **状态校准（2026-09-08）：** Task 1–2 代码已落地，flow 唯一性与
+> `todo/0.2` 绑定已用数据核验（重复绑定 0 行）。文末
+> Manual acceptance 需 USB 真机，未做。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让回归控制台在不同启动环境下可靠执行正确的 Maestro flow，缺少可执行文件时记录失败而不是崩溃。
@@ -50,13 +54,13 @@ assert.equal(env.store.getActiveRun(), undefined);
 assert.match(runRow.log_excerpt, /ENOENT/);
 ```
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `cd tools/regression-console && node --test test/runner.test.js`
 
 Expected: import/export or assertions fail because resolution and child error handling do not exist.
 
-- [ ] **Step 3: Implement minimal resolution and idempotent finish**
+- [x] **Step 3: Implement minimal resolution and idempotent finish**
 
 Resolution order:
 
@@ -67,7 +71,7 @@ Resolution order:
 
 In runner, both `error` and `close` call one guarded `settle(code, extraLog)` function. `error` uses 127. A later `close` after `error` must not finish twice.
 
-- [ ] **Step 4: Run focused and full tests**
+- [x] **Step 4: Run focused and full tests**
 
 Run:
 
@@ -80,7 +84,7 @@ npm run build-ui
 
 Expected: all exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/regression-console/src/runner.js \
@@ -105,11 +109,11 @@ git commit -m "fix(regression-console): handle unavailable Maestro runner"
 - Database unique index: `(feature_module, feature_code, kind)`.
 - Migration keeps the newest row per key, then creates the unique index.
 
-- [ ] **Step 1: Write failing store and migration tests**
+- [x] **Step 1: Write failing store and migration tests**
 
 Prove two upserts for `todo/0.2/flow` leave exactly one row and the second path wins. Create an old database containing duplicate flow rows, reopen it, and assert migration keeps the highest-id row.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
@@ -146,7 +150,7 @@ GROUP BY feature_module, feature_code, kind
 HAVING COUNT(*) > 1;
 ```
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run `npm test && npm run build-ui`, then commit:
 
