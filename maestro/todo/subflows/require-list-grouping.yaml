@@ -1,0 +1,13 @@
+appId: com.cozyla.choresreward
+---
+# 第一阶段（todo-list 增删改查 / 拖拽排序）不点击 Display：
+# 此时账号里没有 todos，Display 的三个排序项与 Show completed 本来就没有可观察效果，
+# 点它只会把分组状态写脏。这里只做前提校验——当前分组必须已经是 List。
+#
+# 断言失败说明设备停在 Profile 分组，请手动切回 List 再跑，不要让脚本去改。
+# 若失败信息显示找不到文案，说明 "List" 挂在按钮节点自身而不是子节点，
+# 把下面改成：assertVisible: { id: ".../ll_todo_groupby_sort", text: "List" }
+- assertVisible:
+    text: "List"
+    childOf:
+      id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"

@@ -1,0 +1,104 @@
+appId: com.cozyla.choresreward
+name: Todo list drag sort
+---
+# 只验证一件事：Lists 弹窗内用拖拽手柄改变 List 顺序，且顺序会落库。
+# 全程不点 Display（第一阶段无 todos，Display 无可观察效果）。
+- runFlow: subflows/cleanup-fixture.yaml
+
+# 内联创建两个夹具 List。不复用 create-fixture-list.yaml：
+# 实测 runFlow 的 env 传参在子流程里不生效（子流程默认值胜出，会建出两个同名 List）。
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_add_todolist"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_todolist_name"
+- inputText: "E2E Todo A"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_color"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_icon"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/tv_save"
+- scrollUntilVisible:
+    element: "E2E Todo A"
+    direction: RIGHT
+    timeout: 5000
+
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_add_todolist"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_todolist_name"
+- inputText: "E2E Todo B"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_color"
+    index: 2
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_icon"
+    index: 2
+- tapOn:
+    id: "com.cozyla.choresreward:id/tv_save"
+- scrollUntilVisible:
+    element: "E2E Todo B"
+    direction: RIGHT
+    timeout: 5000
+
+# 打开 Lists 弹窗，两个夹具都在。
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- assertVisible: "E2E Todo A"
+- assertVisible: "E2E Todo B"
+
+# 拖拽由手柄触摸即触发（TodoListSortPop: isDragOnLongPressEnabled=false,
+# toggleViewId=iv_todolist_sort），不需要长按；手势放慢让 ItemTouchHelper 跟上。
+# 手柄必须绑定到目标行（childOf + containsChild），不能靠坐标找。
+#
+# 新建 List 的初始位置尚未确认，因此做两次方向相反的拖拽：
+# 无论基线顺序如何，至少有一次是真实重排。
+- swipe:
+    from:
+      id: "com.cozyla.choresreward:id/iv_todolist_sort"
+      childOf:
+        containsChild:
+          id: "com.cozyla.choresreward:id/tv_todolist_title"
+          text: "E2E Todo B"
+    direction: UP
+    duration: 1500
+# above/below 用来判断「谁在谁上面」，这是坐标关系的正确用法；
+# 坐标关系不可用于定位操作目标（曾因此误删数据）。
+- assertVisible:
+    text: "E2E Todo B"
+    above:
+      text: "E2E Todo A"
+
+- swipe:
+    from:
+      id: "com.cozyla.choresreward:id/iv_todolist_sort"
+      childOf:
+        containsChild:
+          id: "com.cozyla.choresreward:id/tv_todolist_title"
+          text: "E2E Todo A"
+    direction: UP
+    duration: 1500
+- assertVisible:
+    text: "E2E Todo A"
+    above:
+      text: "E2E Todo B"
+
+- back
+
+# 顺序必须落库：杀进程重进后仍是 A 在 B 之上。
+- stopApp
+- runFlow: subflows/open-todo.yaml
+- runFlow: subflows/require-list-grouping.yaml
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- assertVisible:
+    text: "E2E Todo A"
+    above:
+      text: "E2E Todo B"
+- back

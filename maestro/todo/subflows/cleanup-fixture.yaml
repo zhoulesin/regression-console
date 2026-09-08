@@ -1,0 +1,43 @@
+appId: com.cozyla.choresreward
+---
+- runFlow: open-todo.yaml
+- runFlow: require-list-grouping.yaml
+
+# 打开 Lists 弹窗；每次删除会自动关闭弹窗，删完再重新打开。
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+
+# 有夹具才删：while 条件按当前层级判断，没有残留就直接跳过整个循环，
+# 不像 repeat.times 那样每轮都去等一次不存在的控件。
+# 注意 while/when 的选择器里不能写 timeout（Maestro 会报 Unknown Property）。
+- repeat:
+    while:
+      visible:
+        id: "com.cozyla.choresreward:id/iv_todolist_sort_more"
+        childOf:
+          containsChild:
+            id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo.*"
+    commands:
+      - tapOn:
+          id: "com.cozyla.choresreward:id/iv_todolist_sort_more"
+          childOf:
+            containsChild:
+              id: "com.cozyla.choresreward:id/tv_todolist_title"
+              text: "E2E Todo.*"
+      - tapOn:
+          id: "com.cozyla.choresreward:id/ll_todolist_more_delete"
+      - tapOn:
+          id: "com.cozyla.choresreward:id/tv_delete"
+      - extendedWaitUntil:
+          visible:
+            id: "com.cozyla.choresreward:id/rvTodo"
+          timeout: 4000
+      - tapOn:
+          id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/rvTodo"
+    timeout: 4000

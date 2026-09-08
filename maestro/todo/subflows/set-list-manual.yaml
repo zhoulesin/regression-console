@@ -1,0 +1,12 @@
+appId: com.cozyla.choresreward
+---
+- tapOn:
+    id: "com.cozyla.choresreward:id/llDisplay"
+- tapOn:
+    id: "com.cozyla.choresreward:id/rl_group_list_container"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_sort_manual_container"
+- back
+- extendedWaitUntil:
+    visible: "List"
+    timeout: 5000

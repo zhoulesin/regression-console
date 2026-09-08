@@ -1,0 +1,21 @@
+appId: com.cozyla.choresreward
+name: Todo create from root add button
+---
+# 只验证一件事：根页 Add 能创建一条 Todo 并显示出来。
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todo_root_add"
+- tapOn:
+    id: "com.cozyla.choresreward:id/editName"
+- inputText: "E2E_Full"
+# 保存前确认弹窗选中的是夹具 List；不是就直接失败，不往用户的 List 里写数据。
+- assertVisible:
+    id: "com.cozyla.choresreward:id/txtTodoListDesc"
+    text: "E2E Todo"
+- tapOn:
+    id: "com.cozyla.choresreward:id/txtSave"
+- extendedWaitUntil:
+    visible: "E2E_Full"
+    timeout: 5000

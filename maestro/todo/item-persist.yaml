@@ -1,0 +1,55 @@
+appId: com.cozyla.choresreward
+name: Todo persists after process kill
+---
+# 只验证一件事：杀进程重进后，2.1/2.2 的条目仍在夹具卡片内。
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+# ---- 创建一条 Todo（模拟 2.1 快速添加） ----
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+    childOf:
+      containsChild:
+        id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_content"
+- inputText: "E2E_Persist"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_confirm"
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Persist"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+    timeout: 5000
+
+# ---- 杀进程 ----
+- stopApp
+
+# ---- 重进 ----
+- launchApp
+- extendedWaitUntil:
+    visible: "E2E Todo"
+    timeout: 8000
+- scrollUntilVisible:
+    element: "E2E Todo"
+    direction: RIGHT
+    timeout: 8000
+
+# ---- 断言：条目仍在夹具卡片内 ----
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Persist"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+    timeout: 5000

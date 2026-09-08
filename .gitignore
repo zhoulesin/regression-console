@@ -1,0 +1,19 @@
+node_modules/
+
+# 本机 SQLite 状态与 WAL，不进版本库
+data/
+
+# 前端构建产物
+web/dist/
+
+# 本机配置（含绝对路径）
+regression.config.json
+
+# macOS 目录元数据
+.DS_Store
+
+# 本地代码索引（SQLite，随机器变化）
+.codegraph/
+
+# 工作记忆（含本机绝对路径，不进版本库）
+.workbuddy/

@@ -1,0 +1,30 @@
+appId: com.cozyla.choresreward
+name: Todo full create from root add button
+---
+# 2.2 根页 Add 完整创建
+# 前提：有 1 个夹具 List「E2E Todo」；不点 Display / Filter。
+# 判定：保存前确认弹窗选中的是夹具 List，否则失败不保存；出现 E2E_Full。
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+# ── 根页 Add 打开完整创建弹窗 ──
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todo_root_add"
+- tapOn:
+    id: "com.cozyla.choresreward:id/editName"
+- inputText: "E2E_Full"
+
+# ── fail-closed 断言：写入前确认选中的是夹具 List ──
+# txtTodoListDesc 显示当前选中的 List 名。
+# 不点 todoListLayout 开弹窗——单 List 场景下弹窗可能不出现或瞬间关闭，
+# 直接断言当前选中状态即可；若不是夹具 List 则失败，不保存。
+- assertVisible:
+    id: "com.cozyla.choresreward:id/txtTodoListDesc"
+    text: "E2E Todo"
+
+# ── 保存并验证 ──
+- tapOn:
+    id: "com.cozyla.choresreward:id/txtSave"
+- extendedWaitUntil:
+    visible: "E2E_Full"
+    timeout: 5000

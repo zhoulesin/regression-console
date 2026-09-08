@@ -1,0 +1,195 @@
+appId: com.cozyla.choresreward
+name: Group by List vs Profile changes card set
+---
+# 功能点 3.1：group by List / Profile
+# 判定依据：卡片集合变化（List → 每个 list 一张卡；Profile → 每人一张卡）
+#
+# 设计：创建 2 个夹具 List（E2E Todo A / E2E Todo B），各含 1 条 Todo。
+#   List 模式 → 2 张卡（各含各自 Todo）
+#   Profile 模式 → 两条 Todo 均未指派，合入同一张 Unassigned 卡 → 卡片集合变化
+#
+# 为什么不用「同一 List 内多条 Todo」？
+# 因为两条 Todo 在同一 List + 均未指派 → List/Profile 都是 1 张卡，无法观察变化。
+
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+# ══════════════════════════════════════════
+# 夹具 List A + Todo
+# ══════════════════════════════════════════
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_add_todolist"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_todolist_name"
+- inputText: "E2E Todo A"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_color"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_icon"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/tv_save"
+- scrollUntilVisible:
+    element: "E2E Todo A"
+    direction: RIGHT
+    timeout: 8000
+
+# 快速添加 Todo 到 E2E Todo A 卡片
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+    childOf:
+      containsChild:
+        id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo A"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_content"
+- inputText: "E2E_Todo_AA"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_confirm"
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Todo_AA"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo A"
+    timeout: 5000
+
+# ══════════════════════════════════════════
+# 夹具 List B + Todo
+# ══════════════════════════════════════════
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_add_todolist"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_todolist_name"
+- inputText: "E2E Todo B"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_color"
+    index: 2
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_icon"
+    index: 2
+- tapOn:
+    id: "com.cozyla.choresreward:id/tv_save"
+- scrollUntilVisible:
+    element: "E2E Todo B"
+    direction: RIGHT
+    timeout: 8000
+
+# 快速添加 Todo 到 E2E Todo B 卡片
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+    childOf:
+      containsChild:
+        id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo B"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_content"
+- inputText: "E2E_Todo_BB"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_confirm"
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Todo_BB"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo B"
+    timeout: 5000
+
+# ══════════════════════════════════════════
+# List 模式前置断言：逐卡 scroll + assert
+# 横向排列时同时断言两张卡可能因滚动位置失败，故拆成两步。
+# ══════════════════════════════════════════
+- scrollUntilVisible:
+    element: "E2E_Todo_AA"
+    direction: RIGHT
+    timeout: 8000
+- assertVisible:
+    id: "com.cozyla.choresreward:id/tv_todo_info_title"
+    text: "E2E_Todo_AA"
+    childOf:
+      containsDescendants:
+        - id: "com.cozyla.choresreward:id/tv_todolist_title"
+          text: "E2E Todo A"
+
+- scrollUntilVisible:
+    element: "E2E_Todo_BB"
+    direction: RIGHT
+    timeout: 8000
+- assertVisible:
+    id: "com.cozyla.choresreward:id/tv_todo_info_title"
+    text: "E2E_Todo_BB"
+    childOf:
+      containsDescendants:
+        - id: "com.cozyla.choresreward:id/tv_todolist_title"
+          text: "E2E Todo B"
+
+# ══════════════════════════════════════════
+# 切换到 Profile 模式
+# ══════════════════════════════════════════
+- tapOn:
+    id: "com.cozyla.choresreward:id/llDisplay"
+- tapOn:
+    id: "com.cozyla.choresreward:id/rl_group_profile_container"
+- assertVisible:
+    id: "com.cozyla.choresreward:id/rl_group_profile_container"
+    selected: true
+- back
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/rvTodo"
+    timeout: 5000
+
+# ══════════════════════════════════════════
+# 判定：Profile 模式下两条 Todo 合入同一张卡片
+# ══════════════════════════════════════════
+# 先 scroll 确保至少一条在屏。
+- scrollUntilVisible:
+    element: "E2E_Todo_AA"
+    direction: DOWN
+    timeout: 5000
+
+# containsDescendants 要求 rvTodo 的某个子节点同时包含两条 Todo 标题。
+# List 模式下各 Todo 在不同卡片，无单一子节点能同时包含两者 → 断言会失败。
+# Profile 模式下未指派 Todo 合入同一张 Unassigned 卡 → 断言通过。
+- assertVisible:
+    childOf:
+      id: "com.cozyla.choresreward:id/rvTodo"
+      containsDescendants:
+        - id: "com.cozyla.choresreward:id/tv_todo_info_title"
+          text: "E2E_Todo_AA"
+        - id: "com.cozyla.choresreward:id/tv_todo_info_title"
+          text: "E2E_Todo_BB"
+
+# ══════════════════════════════════════════
+# 恢复默认 List + Manual 排序，清理夹具
+# ══════════════════════════════════════════
+- tapOn:
+    id: "com.cozyla.choresreward:id/llDisplay"
+- tapOn:
+    id: "com.cozyla.choresreward:id/rl_group_list_container"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_sort_manual_container"
+- assertVisible:
+    id: "com.cozyla.choresreward:id/rl_group_list_container"
+    selected: true
+- assertVisible:
+    id: "com.cozyla.choresreward:id/ll_sort_manual_container"
+    selected: true
+- back
+- assertVisible: "List"
+

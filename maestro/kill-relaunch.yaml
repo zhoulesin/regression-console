@@ -1,0 +1,25 @@
+appId: com.cozyla.choresreward
+name: Kill process then relaunch stays signed in
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/czl_nav_bar"
+    timeout: 8000
+
+- stopApp
+
+- launchApp:
+    clearState: false
+    stopApp: false
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/czl_nav_bar"
+    timeout: 8000
+
+- assertNotVisible:
+    id: "com.cozyla.choresreward:id/txtGetStarted"

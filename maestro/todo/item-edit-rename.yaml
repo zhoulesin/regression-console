@@ -1,0 +1,85 @@
+appId: com.cozyla.choresreward
+name: Todo item edit rename
+---
+# 2.3 编辑改名
+# 前提：有 1 个夹具 List；不点 Display / Filter。
+# 判定：旧名消失、新名可见（绑定在夹具卡片容器内）。
+- runFlow: subflows/cleanup-fixture.yaml
+- runFlow: subflows/create-fixture-list.yaml
+
+# ── 在夹具卡片内快速添加一条 Todo ──
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+    childOf:
+      containsChild:
+        id: "com.cozyla.choresreward:id/ll_fast_add_placeholder"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_content"
+- inputText: "E2E_Rename"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_confirm"
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Rename"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+    timeout: 5000
+
+# ── 打开编辑弹窗（tap 目标绑定夹具卡片容器，防命中其他 List 的 Todo） ──
+- tapOn:
+    text: "E2E_Rename"
+    childOf:
+      containsDescendants:
+        - id: "com.cozyla.choresreward:id/tv_todolist_title"
+          text: "E2E Todo"
+
+# ── fail-closed：输入前先确认编辑弹窗名字字段确为旧名 ──
+- assertVisible:
+    id: "com.cozyla.choresreward:id/editName"
+    text: "E2E_Rename"
+
+# ── 改名：longPress + Select All 全选 + inputText 替换 ──
+# 禁止 eraseText：它不触发 TextWatcher，导致 Save 内部校验认为标题为空
+# 而静默吞掉保存操作（弹窗不关闭、数据不持久化）。
+# 禁止 triple-tap（repeat:3）：该 App 自定义 EditText 对 triple-tap 不可靠，
+# 会导致 inputText 追加而非替换，editName 变成 'E2E_RenameE2E_Renamed'。
+# longPress + Select All 是 Android 通用的全选路径，TextWatcher 仍收到 onChange。
+- longPressOn:
+    id: "com.cozyla.choresreward:id/editName"
+- tapOn: "Select All"
+- inputText: "E2E_Renamed"
+
+# ── 保存：点击两次 ──
+# 【诊断线索】编辑弹窗内第一次 tapOn txtSave 仅关闭软键盘，不触发保存逻辑。
+# repeat:2 让第一次消费键盘收起、第二次真正 Save。
+# 若键盘已收起，第二次等价于普通单击，无副作用。
+- tapOn:
+    id: "com.cozyla.choresreward:id/txtSave"
+    repeat: 2
+    delay: 500
+
+# ── fail-closed：确认弹窗已关闭（Save 生效）──
+- assertNotVisible: "Edit To-Do"
+
+# ── 判定：旧名消失 ──
+- extendedWaitUntil:
+    notVisible: "E2E_Rename"
+    timeout: 5000
+
+# ── 判定：新名可见，且绑定在夹具卡片容器内 ──
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/tv_todo_info_title"
+      text: "E2E_Renamed"
+      childOf:
+        containsDescendants:
+          - id: "com.cozyla.choresreward:id/tv_todolist_title"
+            text: "E2E Todo"
+    timeout: 5000

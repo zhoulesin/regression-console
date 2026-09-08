@@ -1,0 +1,30 @@
+appId: com.cozyla.choresreward
+name: Todo portrait root smoke
+---
+- runFlow: subflows/open-todo.yaml
+
+- assertVisible:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- assertVisible:
+    id: "com.cozyla.choresreward:id/llDisplay"
+- assertVisible:
+    id: "com.cozyla.choresreward:id/llFilter"
+- assertVisible:
+    id: "com.cozyla.choresreward:id/iv_todo_root_add"
+
+- stopApp
+
+- launchApp:
+    clearState: false
+    stopApp: false
+
+- extendedWaitUntil:
+    visible: "To-do"
+    timeout: 8000
+
+- tapOn: "To-do"
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/rvTodo"
+    timeout: 5000

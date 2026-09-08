@@ -1,0 +1,14 @@
+appId: com.cozyla.choresreward
+name: Cold launch opens the signed-in main screen
+---
+- launchApp:
+    clearState: false
+    stopApp: true
+
+- extendedWaitUntil:
+    visible:
+      id: "com.cozyla.choresreward:id/czl_nav_bar"
+    timeout: 8000
+
+- assertNotVisible:
+    id: "com.cozyla.choresreward:id/txtGetStarted"

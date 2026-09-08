@@ -1,0 +1,16 @@
+{
+  "_说明": "复制为 regression.config.json 后修改。regression.config.json 含本机绝对路径，不进版本库。",
+  "_appRoot": "被测 Android 项目根。相对路径按控制台根解析，也可用绝对路径。不填则默认 ../..（控制台位于 项目/tools/ 下的旧布局）。",
+  "_sourceDirs": "可选。catalog 生成功能点时扫描的源码目录，按模块配。不填则用内置的 chores 默认目录。",
+
+  "appRoot": "../..",
+  "sourceDirs": {
+    "todo": ["app/src/main/java/com/cozyla/choresreward/ui/todo"],
+    "routine": ["app/src/main/java/com/cozyla/choresreward/ui/routine"],
+    "chore": [
+      "app/src/main/java/com/cozyla/choresreward/ui/chorelist",
+      "app/src/main/java/com/cozyla/choresreward/ui/createchore",
+      "app/src/main/java/com/cozyla/choresreward/ui/modifychore"
+    ]
+  }
+}

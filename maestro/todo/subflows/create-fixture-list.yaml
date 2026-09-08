@@ -1,0 +1,30 @@
+appId: com.cozyla.choresreward
+---
+# 创建单个夹具 List「E2E Todo」。
+# 名字写死不做参数化：实测通过 runFlow 的 env 传名字无效（子流程里的默认值胜出，
+# 两次调用都建成了同名 List），需要多个 List 的场景请在 flow 里内联创建步骤。
+# 调用方须已在 Todo 页（通常刚跑完 cleanup-fixture）。这里不再 open-todo，避免二次冷启动。
+- runFlow: require-list-grouping.yaml
+
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_todo_groupby_sort"
+- tapOn:
+    id: "com.cozyla.choresreward:id/ll_add_todolist"
+
+- tapOn:
+    id: "com.cozyla.choresreward:id/et_todolist_name"
+- inputText: "E2E Todo"
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_color"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/iv_todolist_create_icon"
+    index: 1
+- tapOn:
+    id: "com.cozyla.choresreward:id/tv_save"
+
+# List 卡片横向排列，新建的可能在屏幕外。
+- scrollUntilVisible:
+    element: "E2E Todo"
+    direction: RIGHT
+    timeout: 8000
