@@ -369,6 +369,9 @@ git commit -m "feat: parse and validate DUT regression.manifest.json"
   - 人工项**照常收录**：`manual` 不影响 `hideFeaturesNotIn`，人工项始终 `hidden=0`
   - `chapters`：同一 module 下 `chapterTitle` 非空则写入 `chapters_json` 对象键为字符串 chapter
   - `hideFeaturesNotIn` 本次全部 `(module,code)`
+  - **flow 绑定**：非 manual 且 `flow` 非空时 `store.upsertFlow({ feature_module, feature_code, path: f.flow, kind: 'flow' })`。
+    Task 8 删掉 `src/seed/` 与 `src/importer.js` 之后，flow 表只剩这里能写——漏掉会导致 runner 拿不到脚本路径。
+    `upsertFlow` 走 `ON CONFLICT(feature_module, feature_code, kind)`，重复 sync 幂等
   - 整段放在 `store.transaction(fn)` —— 若 store 还没有 `transaction`，加 `transaction(fn) { return db.transaction(fn)(); }` 暴露出去，或在 `sync.js` 里要求 `store.withTransaction`
 
 检查 `createStore` 是否已有类似 `applyCatalogDraft` 的 `db.transaction`。若有，照同样方式在 `syncFromManifest` 内部调用 `store.runSync(fn)` 新方法，避免从外面拿 raw db。
@@ -422,7 +425,7 @@ runSyncSnapshot(fn) {
 }
 ```
 
-- [ ] **Step 1: Failing tests in `test/sync.test.js`**
+- [x] **Step 1: Failing tests in `test/sync.test.js`**
 
 ```javascript
 it('keeps snapshot when manifest is invalid', () => {
@@ -462,15 +465,15 @@ it('does not overwrite status on second sync', () => {
 
 `fixtureRoot` = `path.resolve(import.meta.dirname, 'fixtures/app')`
 
-- [ ] **Step 2: Run to see FAIL**
+- [x] **Step 2: Run to see FAIL**
 
 Run: `node --test test/sync.test.js`
 
-- [ ] **Step 3: Implement `src/sync.js`**
+- [x] **Step 3: Implement `src/sync.js`**
 
-- [ ] **Step 4: PASS `node --test test/sync.test.js`**
+- [x] **Step 4: PASS `node --test test/sync.test.js`**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/sync.js src/store.js test/sync.test.js test/fixtures/app

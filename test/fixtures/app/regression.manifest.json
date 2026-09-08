@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "appId": "com.example.fixture",
+  "device": "fixture-device",
+  "modules": [{ "id": "todo", "title": "Todo" }],
+  "features": [
+    {
+      "module": "todo",
+      "code": "2.1",
+      "chapter": 2,
+      "chapterTitle": "单 List 内的 Todo",
+      "title": "卡片内快速添加",
+      "criteria": "出现 E2E_Fast",
+      "precondition": "夹具 List",
+      "flow": "maestro/ok.yaml"
+    },
+    {
+      "module": "todo",
+      "code": "2.2",
+      "chapter": 2,
+      "title": "缺文件",
+      "criteria": "x",
+      "precondition": "",
+      "flow": "maestro/missing.yaml"
+    },
+    {
+      "module": "todo",
+      "code": "1.6",
+      "chapter": 1,
+      "title": "List 数量上限",
+      "criteria": "手动确认达到上限时的提示",
+      "precondition": "",
+      "manual": true
+    }
+  ]
+}

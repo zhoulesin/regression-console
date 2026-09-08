@@ -677,6 +677,16 @@ export function createStore(db) {
       return applyCatalogTx(Number(sessionId), mod(module));
     },
 
+    /**
+     * 把一批写入包进单个事务。
+     *
+     * 快照同步要么整份生效要么整份不生效——中途失败留下半份清单，
+     * 会让「上次成功快照」这个保底前提失效。
+     */
+    runSyncSnapshot(fn) {
+      return db.transaction(fn)();
+    },
+
     /** 最近一次失败诊断，供看板展示与「按诊断重生」回流 prompt */
     getLatestDiagnosis(code, module = DEFAULT_MODULE) {
       return latestDiagnosisStmt.get(mod(module), code);
