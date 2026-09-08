@@ -15,7 +15,7 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
 }
 
-export function getSavedModule(fallback = 'todo') {
+export function getSavedModule(fallback = '') {
   return localStorage.getItem(MODULE_KEY) || fallback;
 }
 
@@ -65,9 +65,7 @@ export async function getModules() {
   return api('/api/modules');
 }
 
-export async function createModule(id, title) {
-  return api('/api/modules', {
-    method: 'POST',
-    body: JSON.stringify({ id, title }),
-  });
+/** 从被测仓的 regression.manifest.json 重建快照 */
+export function syncManifest() {
+  return api('/api/sync', { method: 'POST' });
 }

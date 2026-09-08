@@ -61,6 +61,26 @@ body {
   flex: none;
 }
 
+.sync-btn {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sync-btn:hover:not(:disabled) {
+  border-color: #6b7fd7;
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .cards {
   display: flex;
   gap: 8px;

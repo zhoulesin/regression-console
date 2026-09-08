@@ -4,9 +4,9 @@ import {
   bootstrapToken,
   getModules,
   getSavedModule,
-  createModule,
   saveModule,
   streamUrl,
+  syncManifest,
   withModule,
 } from './api.js';
 import { AttemptTimeline } from './AttemptTimeline.jsx';
@@ -14,25 +14,6 @@ import { CatalogPanel } from './CatalogPanel.jsx';
 import { CurrentDetail } from './CurrentDetail.jsx';
 import { StepModal } from './StepModal.jsx';
 import { resolveCurrentStep } from './attemptViewModel.js';
-
-const DEFAULT_MODULES = [
-  { id: 'todo', title: 'Todo' },
-  { id: 'routine', title: 'Routine' },
-  { id: 'chore', title: 'Chore' },
-];
-
-const CHAPTER_TITLES = {
-  todo: {
-    0: 'App 级冒烟',
-    1: 'todo-list',
-    2: '单 List 内的 Todo',
-    3: 'Display 排序',
-    4: '完成态',
-    5: 'Filter',
-  },
-  routine: {},
-  chore: {},
-};
 
 const STATUS = {
   PENDING_RUN: '待执行',
@@ -89,21 +70,19 @@ function resolveStep(feature, flows) {
 }
 
 export default function App() {
-  const [moduleId, setModuleId] = useState(() => getSavedModule('todo'));
+  const [moduleId, setModuleId] = useState(() => getSavedModule(''));
   const [features, setFeatures] = useState([]);
+  const [chapterTitles, setChapterTitles] = useState({});
   const [selectedCode, setSelectedCode] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [logs, setLogs] = useState('');
   const [stepModal, setStepModal] = useState(null);
   const [attemptDetails, setAttemptDetails] = useState({});
   const [modalLoading, setModalLoading] = useState(false);
   const [catalogMode, setCatalogMode] = useState(false);
-  const [modules, setModules] = useState(DEFAULT_MODULES);
-  const [showAddModule, setShowAddModule] = useState(false);
-  const [newModuleId, setNewModuleId] = useState('');
-  const [newModuleTitle, setNewModuleTitle] = useState('');
-  const [moduleError, setModuleError] = useState('');
+  const [modules, setModules] = useState([]);
   const esRef = useRef(null);
   const currentDetailRef = useRef(null);
 
@@ -111,19 +90,21 @@ export default function App() {
     bootstrapToken();
   }, []);
 
-  useEffect(() => {
-    async function loadModules() {
-      try {
-        const data = await getModules();
-        if (data.modules && data.modules.length > 0) {
-          setModules(data.modules);
-        }
-      } catch {
-        // fallback to defaults
-      }
+  const loadModules = useCallback(async () => {
+    try {
+      const data = await getModules();
+      setModules(data.modules || []);
+      // 已保存的模块不在清单里（清单变了）就回到第一个
+      const ids = new Set((data.modules || []).map((m) => m.id));
+      setModuleId((prev) => (ids.has(prev) ? prev : data.modules?.[0]?.id || ''));
+    } catch {
+      // 模块加载失败时由 features 请求报错
     }
-    loadModules();
   }, []);
+
+  useEffect(() => {
+    loadModules();
+  }, [loadModules]);
 
   function switchModule(id) {
     saveModule(id);
@@ -133,9 +114,11 @@ export default function App() {
   }
 
   const refresh = useCallback(async () => {
+    if (!moduleId) return;
     const data = await api(withModule('/api/features', moduleId));
     const list = data.features || [];
     setFeatures(list);
+    setChapterTitles(data.chapterTitles || {});
     setSelectedCode((prev) => {
       if (prev && list.some((f) => f.code === prev)) return prev;
       return list[0]?.code ?? null;
@@ -143,12 +126,31 @@ export default function App() {
   }, [moduleId]);
 
   useEffect(() => {
-    refresh().catch((e) => setError(String(e.message || e)));
+    if (moduleId) {
+      refresh().catch((e) => setError(String(e.message || e)));
+    } else {
+      setFeatures([]);
+    }
     const t = setInterval(() => {
-      refresh().catch(() => {});
+      if (moduleId) refresh().catch(() => {});
     }, 5000);
     return () => clearInterval(t);
-  }, [refresh]);
+  }, [refresh, moduleId]);
+
+  async function onSync() {
+    if (syncing) return;
+    setSyncing(true);
+    setError('');
+    try {
+      await syncManifest();
+      await loadModules();
+      await refresh();
+    } catch (e) {
+      setError(`同步失败：${String(e.message || e)}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const selected = useMemo(
     () => features.find((f) => f.code === selectedCode) || null,
@@ -196,7 +198,9 @@ export default function App() {
 
   // 当前主步骤只驱动底部操作区；点击历史节点只开弹框，不改变这里。
   const legacyStep = resolveStep(selected, flows);
-  const step = selected?.status === STATUS.MANUAL ||
+  const step = selected?.manual ||
+    selected?.runnable === false ||
+    selected?.status === STATUS.MANUAL ||
     selected?.status === STATUS.FALSE_GREEN
     ? 'blocked'
     : latestAttempt
@@ -206,12 +210,15 @@ export default function App() {
           legacyStep === 'rerun'
         ? 'run'
         : legacyStep;
-  const blockedReason =
-    selected?.status === STATUS.MANUAL
+  const blockedReason = selected?.manual
+    ? '该功能点只能手动验证（清单标 manual），不提供自动执行。'
+    : selected?.status === STATUS.MANUAL
       ? '这条标为留手测，流程停在这里，不自动写/跑。'
       : selected?.status === STATUS.FALSE_GREEN
         ? '这条是假绿，需要人工复核，不开放主按钮。'
-        : '';
+        : selected?.runnable === false
+          ? '绑定的 yaml 不存在，无法执行。请在被测仓补齐脚本后重新同步。'
+          : '';
 
   const closeStepModal = useCallback(() => setStepModal(null), []);
 
@@ -305,38 +312,19 @@ export default function App() {
     setCatalogMode(false);
   }
 
-  async function handleCreateModule() {
-    const id = newModuleId.trim().toLowerCase();
-    const title = newModuleTitle.trim();
-
-    setModuleError('');
-
-    if (!id || !/^[a-z0-9-]{2,20}$/.test(id)) {
-      setModuleError('ID 只能是小写字母/数字/连字符，长度 2-20');
-      return;
-    }
-    if (!title) {
-      setModuleError('标题必填');
-      return;
-    }
-
-    try {
-      await createModule(id, title);
-      const data = await getModules();
-      setModules(data.modules || DEFAULT_MODULES);
-      setShowAddModule(false);
-      setNewModuleId('');
-      setNewModuleTitle('');
-      switchModule(id);
-    } catch (e) {
-      setModuleError(String(e.message || e));
-    }
-  }
-
   return (
     <div className="app">
       <div className="topbar">
         <h1>真机回归控制台</h1>
+        <button
+          type="button"
+          className="sync-btn"
+          disabled={syncing}
+          onClick={onSync}
+          title="从被测仓 regression.manifest.json 重建功能点快照"
+        >
+          {syncing ? '同步中…' : '同步清单'}
+        </button>
         <div className="cards">
           <div className="card">
             <div className="k">通过</div>
@@ -367,13 +355,6 @@ export default function App() {
             {m.title}
           </button>
         ))}
-        <button
-          type="button"
-          className="module-add"
-          onClick={() => setShowAddModule(true)}
-        >
-          +
-        </button>
       </div>
 
       <div className="board">
@@ -382,20 +363,16 @@ export default function App() {
             <button
               type="button"
               className={catalogMode ? 'active' : ''}
-              onClick={() => {
-                setCatalogMode(!catalogMode);
-                setCatalogError('');
-              }}
+              onClick={() => setCatalogMode(!catalogMode)}
             >
-              + 补功能点
+              清单说明
             </button>
           </div>
           {byChapter.map(([chapter, rows]) => (
             <div className="chapter" key={chapter}>
               <div className="chapter-hd">
                 {chapter}.{' '}
-                {(CHAPTER_TITLES[moduleId] || {})[chapter] ??
-                  `第 ${chapter} 章`}
+                {chapterTitles[String(chapter)] ?? `第 ${chapter} 章`}
               </div>
               {rows.map((f) => (
                 <div
@@ -415,9 +392,9 @@ export default function App() {
           ))}
           {features.length === 0 && (
             <div className="empty">
-              {moduleId === 'todo'
-                ? '暂无功能点。请先启动 API 服务并导入。'
-                : `${DEFAULT_MODULES.find((m) => m.id === moduleId)?.title || moduleId} 模块还没有功能点。在 src/seed/${moduleId}.js 里加 seed 即可。`}
+              {modules.length === 0
+                ? '暂无模块。请先同步 DUT 清单，或检查 appRoot 配置。'
+                : '该模块暂无功能点。请同步 DUT 清单，或在被测仓的 regression.manifest.json 里补充条目。'}
             </div>
           )}
         </aside>
@@ -569,51 +546,6 @@ export default function App() {
           )}
         </section>
       </div>
-
-      {showAddModule && (
-        <div className="modal-backdrop" onClick={() => setShowAddModule(false)}>
-          <div className="step-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="step-modal-hd">
-              <h3>添加新模块</h3>
-              <button onClick={() => setShowAddModule(false)}>×</button>
-            </div>
-            <div className="step-modal-body">
-              {moduleError && <div className="err">{moduleError}</div>}
-              <div className="module-form">
-                <label>
-                  模块 ID
-                  <input
-                    type="text"
-                    value={newModuleId}
-                    onChange={(e) => setNewModuleId(e.target.value)}
-                    placeholder="例如：shopping"
-                    pattern="[a-z0-9-]{2,20}"
-                  />
-                  <small>小写字母/数字/连字符，长度 2-20</small>
-                </label>
-                <label>
-                  模块标题
-                  <input
-                    type="text"
-                    value={newModuleTitle}
-                    onChange={(e) => setNewModuleTitle(e.target.value)}
-                    placeholder="例如：购物清单"
-                    maxLength={50}
-                  />
-                </label>
-                <div className="flow-actions">
-                  <button className="primary" onClick={handleCreateModule}>
-                    创建
-                  </button>
-                  <button onClick={() => setShowAddModule(false)}>
-                    取消
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -650,13 +650,13 @@ git commit -m "feat(runner): execute Maestro with cwd at DUT appRoot"
 
 无法用浏览器工具时：不强制 E2E；保证 `npm --prefix web run build` 成功。
 
-- [ ] **Step 1: 改前端如上**
+- [x] **Step 1: 改前端如上**
 
-- [ ] **Step 2: `npm --prefix web run build`**
+- [x] **Step 2: `npm --prefix web run build`**
 
 Expected: 成功，无 `createModule` / `DEFAULT_MODULES` 引用
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src
