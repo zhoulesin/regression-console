@@ -17,3 +17,5 @@ regression.config.json
 
 # 工作记忆（含本机绝对路径，不进版本库）
 .workbuddy/
+regression.db
+.claude/
